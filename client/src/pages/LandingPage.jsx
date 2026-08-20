@@ -46,7 +46,7 @@ export default function LandingPage() {
         </p>
         <div className="flex flex-wrap justify-center gap-4">
           <Link 
-            to="/marketplace" 
+            to="/resources" 
             className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-300 shadow-lg shadow-indigo-600/20 hover:scale-105"
           >
             <span>Explore Marketplace</span>

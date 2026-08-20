@@ -11,7 +11,10 @@ import {
   AlertCircle
 } from 'lucide-react';
 
+import { useAuth } from '../context/AuthContext';
+
 export default function StudentDashboard() {
+  const { user } = useAuth();
   const userStats = [
     { label: 'Active Listings', value: '3 Items', icon: PlusCircle, color: 'text-indigo-400', bg: 'bg-indigo-500/10' },
     { label: 'Completed Swaps', value: '14 Trades', icon: CheckCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
@@ -33,11 +36,11 @@ export default function StudentDashboard() {
       {/* Welcome Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-gradient-to-r from-indigo-950/40 to-slate-900/40 border border-[#242f4c] rounded-2xl p-6 gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-white">Hello, Alex Rivera!</h1>
+          <h1 className="text-3xl font-extrabold text-white">Hello, {user ? user.name : 'Student'}!</h1>
           <p className="text-slate-400 text-sm mt-1">Manage your active campus resources, exchanges, and community impact.</p>
         </div>
         <Link 
-          to="/add-resource"
+          to="/resources/create"
           className="flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all duration-300 shadow-md shadow-indigo-600/15"
         >
           <PlusCircle className="h-4 w-4" />
@@ -160,7 +163,7 @@ export default function StudentDashboard() {
             <p className="text-xs text-slate-400 leading-relaxed mb-4">
               By borrowing or swapping components instead of purchasing new ones, you have prevented approximately 18.4 kg of electronic and paper waste this semester. Keep it up!
             </p>
-            <Link to="/marketplace" className="inline-block text-xs font-semibold bg-[#0d111c] hover:bg-slate-900 border border-slate-700/60 hover:border-slate-600 px-4 py-2 rounded-xl text-slate-300 hover:text-white transition-all">
+            <Link to="/resources" className="inline-block text-xs font-semibold bg-[#0d111c] hover:bg-slate-900 border border-slate-700/60 hover:border-slate-600 px-4 py-2 rounded-xl text-slate-300 hover:text-white transition-all">
               Browse More Items
             </Link>
           </div>

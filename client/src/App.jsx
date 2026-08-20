@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 
 // Auth Provider
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -15,6 +15,7 @@ import StudentDashboard from './pages/StudentDashboard';
 import Marketplace from './pages/Marketplace';
 import ResourceDetails from './pages/ResourceDetails';
 import AddResource from './pages/AddResource';
+import EditResource from './pages/EditResource';
 import MyListings from './pages/MyListings';
 import MyRequests from './pages/MyRequests';
 import ExchangeHistory from './pages/ExchangeHistory';
@@ -41,6 +42,17 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
+// Redirect Helper Components for Backwards Compatibility
+function NavigateToResourceDetails() {
+  const { id } = useParams();
+  return <Navigate to={`/resources/${id}`} replace />;
+}
+
+function NavigateToEditResource() {
+  const { id } = useParams();
+  return <Navigate to={`/resources/${id}/edit`} replace />;
+}
+
 export default function App() {
   return (
     <AuthProvider>
@@ -60,9 +72,19 @@ export default function App() {
             </ProtectedRoute>
           }>
             <Route path="/dashboard" element={<StudentDashboard />} />
-            <Route path="/marketplace" element={<Marketplace />} />
-            <Route path="/resource/:id" element={<ResourceDetails />} />
-            <Route path="/add-resource" element={<AddResource />} />
+            
+            {/* Redirects for legacy routes */}
+            <Route path="/marketplace" element={<Navigate to="/resources" replace />} />
+            <Route path="/add-resource" element={<Navigate to="/resources/create" replace />} />
+            <Route path="/resource/:id" element={<NavigateToResourceDetails />} />
+            <Route path="/edit-resource/:id" element={<NavigateToEditResource />} />
+
+            {/* RESTful Resource Management Routes */}
+            <Route path="/resources" element={<Marketplace />} />
+            <Route path="/resources/:id" element={<ResourceDetails />} />
+            <Route path="/resources/create" element={<AddResource />} />
+            <Route path="/resources/:id/edit" element={<EditResource />} />
+
             <Route path="/my-listings" element={<MyListings />} />
             <Route path="/my-requests" element={<MyRequests />} />
             <Route path="/history" element={<ExchangeHistory />} />

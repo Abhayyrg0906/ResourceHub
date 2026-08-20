@@ -21,9 +21,9 @@ export default function MainLayout() {
   const { user, logout } = useAuth();
 
   const navItems = [
-    { name: 'Marketplace', path: '/marketplace', icon: BookOpen },
+    { name: 'Marketplace', path: '/resources', icon: BookOpen },
     { name: 'Dashboard', path: '/dashboard', icon: User },
-    { name: 'Add Resource', path: '/add-resource', icon: PlusCircle },
+    { name: 'Add Resource', path: '/resources/create', icon: PlusCircle },
     { name: 'My Listings', path: '/my-listings', icon: FolderHeart },
     { name: 'History', path: '/history', icon: History },
     { name: 'Admin', path: '/admin', icon: ShieldAlert },
@@ -165,7 +165,7 @@ export default function MainLayout() {
               <span className="font-bold text-slate-200">ResourceHub</span>
             </div>
             <div className="flex space-x-6 text-sm mb-4 md:mb-0">
-              <Link to="/marketplace" className="hover:text-indigo-400 transition-colors">Marketplace</Link>
+              <Link to="/resources" className="hover:text-indigo-400 transition-colors">Marketplace</Link>
               <Link to="/about" className="hover:text-indigo-400 transition-colors">About Sustainability</Link>
               <Link to="/admin" className="hover:text-indigo-400 transition-colors">Administration</Link>
             </div>

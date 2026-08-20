@@ -4,6 +4,8 @@ require('dotenv').config();
 
 const healthRouter = require('./routes/health');
 const authRouter = require('./routes/auth');
+const resourcesRouter = require('./routes/resources');
+const categoriesRouter = require('./routes/categories');
 const db = require('./config/database');
 
 const app = express();
@@ -18,6 +20,8 @@ app.use(express.json());
 // Routes
 app.use('/api', healthRouter);
 app.use('/api/auth', authRouter);
+app.use('/api/resources', resourcesRouter);
+app.use('/api/categories', categoriesRouter);
 
 // Fallback Route for Undefined Paths (404 Handler)
 app.use((req, res, next) => {

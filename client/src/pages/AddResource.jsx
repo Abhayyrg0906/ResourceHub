@@ -1,33 +1,94 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { PlusCircle, ArrowRight, ShieldCheck, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { PlusCircle, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
+import { getCategories, createResource } from '../services/resourceService';
 
 export default function AddResource() {
-  const [title, setTitle] = useState('');
-  const [category, setCategory] = useState('Textbooks');
-  const [type, setType] = useState('Sell');
-  const [value, setValue] = useState('');
-  const [condition, setCondition] = useState('Good');
-  const [location, setLocation] = useState('');
-  const [desc, setDesc] = useState('');
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
+
+  // Form Fields State
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [exchangeType, setExchangeType] = useState('SELL');
+  const [price, setPrice] = useState('');
+  const [itemCondition, setItemCondition] = useState('GOOD');
+  const [meetupLocation, setMeetupLocation] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  // Load Categories on mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await getCategories();
+        if (res.success) {
+          setCategories(res.data);
+          if (res.data.length > 0) {
+            setCategoryId(res.data[0].id);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load categories:', err.message);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
+    setError('');
+
+    // Pre-validations
+    if (exchangeType === 'SELL') {
+      const numericPrice = parseFloat(price);
+      if (isNaN(numericPrice) || numericPrice < 0) {
+        setError('Price must be a valid positive number for SELL listings.');
+        setLoading(false);
+        return;
+      }
+    }
+
+    try {
+      const payload = {
+        title,
+        description,
+        category_id: parseInt(categoryId, 10),
+        exchange_type: exchangeType,
+        price: exchangeType === 'SELL' ? parseFloat(price) : null,
+        item_condition: itemCondition,
+        meetup_location: meetupLocation,
+        image_url: imageUrl || null
+      };
+
+      const res = await createResource(payload);
+      if (res.success) {
+        setSuccess(true);
+        setTimeout(() => {
+          navigate('/resources');
+        }, 2000);
+      }
+    } catch (err) {
+      console.error('Create listing failed:', err.message);
+      setError(err.response?.data?.message || 'Failed to list resource. Please try again.');
+    } finally {
       setLoading(false);
-      setSuccess(true);
-      setTimeout(() => {
-        navigate('/marketplace');
-      }, 2000);
-    }, 1200);
+    }
   };
 
   return (
     <div className="max-w-2xl mx-auto my-6 bg-[#161d30]/60 border border-[#242f4c] rounded-3xl p-6 md:p-8 shadow-xl relative">
+      {/* Back Link */}
+      <Link to="/resources" className="inline-flex items-center space-x-2 text-sm text-slate-400 hover:text-white mb-6 transition-colors">
+        <ArrowLeft className="h-4 w-4" />
+        <span>Back to Resources</span>
+      </Link>
+
       <h1 className="text-3xl font-extrabold text-white tracking-tight mb-2">List a Resource</h1>
       <p className="text-sm text-slate-400 mb-8">Share your academic items with verified campus peers to earn credits, sell, swap, or donate.</p>
 
@@ -41,6 +102,13 @@ export default function AddResource() {
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
+          {error && (
+            <div className="flex items-center space-x-2 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-xl px-4 py-3 text-sm animate-fadeIn">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             
             {/* Title */}
@@ -52,7 +120,7 @@ export default function AddResource() {
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. TI-84 Plus Calculator, Chemistry Lab Coat (L)"
                 required
-                className="w-full px-4 py-3 bg-[#0d111c]/90 border border-slate-700/60 focus:border-indigo-500/80 rounded-xl text-slate-100 placeholder-slate-500 outline-none transition-all duration-300"
+                className="w-full px-4 py-3 bg-[#0d111c]/90 border border-slate-700/60 focus:border-indigo-500/80 rounded-xl text-slate-100 placeholder-slate-500 outline-none transition-all duration-300 text-sm"
               />
             </div>
 
@@ -60,14 +128,13 @@ export default function AddResource() {
             <div>
               <label className="block text-sm font-semibold text-slate-300 mb-2">Category</label>
               <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-4 py-3 bg-[#0d111c]/90 border border-slate-700/60 focus:border-indigo-500/80 rounded-xl text-slate-200 outline-none transition-all duration-300"
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                className="w-full px-4 py-3 bg-[#0d111c]/90 border border-slate-700/60 focus:border-indigo-500/80 rounded-xl text-slate-200 outline-none transition-all duration-300 text-sm"
               >
-                <option value="Textbooks">Textbooks</option>
-                <option value="Electronics">Electronics</option>
-                <option value="Laboratory">Laboratory</option>
-                <option value="Stationery">Stationery</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
               </select>
             </div>
 
@@ -75,15 +142,15 @@ export default function AddResource() {
             <div>
               <label className="block text-sm font-semibold text-slate-300 mb-2">Condition</label>
               <select
-                value={condition}
-                onChange={(e) => setCondition(e.target.value)}
-                className="w-full px-4 py-3 bg-[#0d111c]/90 border border-slate-700/60 focus:border-indigo-500/80 rounded-xl text-slate-200 outline-none transition-all duration-300"
+                value={itemCondition}
+                onChange={(e) => setItemCondition(e.target.value)}
+                className="w-full px-4 py-3 bg-[#0d111c]/90 border border-slate-700/60 focus:border-indigo-500/80 rounded-xl text-slate-200 outline-none transition-all duration-300 text-sm"
               >
-                <option value="New">New</option>
-                <option value="Like New">Like New</option>
-                <option value="Good">Good</option>
-                <option value="Fair">Fair</option>
-                <option value="Poor">Poor</option>
+                <option value="NEW">New</option>
+                <option value="LIKE_NEW">Like New</option>
+                <option value="GOOD">Good</option>
+                <option value="FAIR">Fair</option>
+                <option value="POOR">Poor</option>
               </select>
             </div>
 
@@ -91,37 +158,42 @@ export default function AddResource() {
             <div>
               <label className="block text-sm font-semibold text-slate-300 mb-2">Exchange Type</label>
               <select
-                value={type}
-                onChange={(e) => setType(e.target.value)}
-                className="w-full px-4 py-3 bg-[#0d111c]/90 border border-slate-700/60 focus:border-indigo-500/80 rounded-xl text-slate-200 outline-none transition-all duration-300"
+                value={exchangeType}
+                onChange={(e) => setExchangeType(e.target.value)}
+                className="w-full px-4 py-3 bg-[#0d111c]/90 border border-slate-700/60 focus:border-indigo-500/80 rounded-xl text-slate-200 outline-none transition-all duration-300 text-sm"
               >
-                <option value="Sell">Sell (Cash/Points)</option>
-                <option value="Borrow">Borrow (Free Loan)</option>
-                <option value="Swap">Swap (Exchange)</option>
-                <option value="Donate">Donate (Gift)</option>
+                <option value="SELL">Sell (Cash/Points)</option>
+                <option value="BORROW">Borrow (Free Loan)</option>
+                <option value="SWAP">Swap (Exchange)</option>
+                <option value="DONATE">Donate (Gift)</option>
               </select>
             </div>
 
             {/* Price/Details (Conditional on type) */}
             <div>
               <label className="block text-sm font-semibold text-slate-300 mb-2">
-                {type === 'Sell' && 'Price ($)'}
-                {type === 'Borrow' && 'Max Duration (Days)'}
-                {type === 'Swap' && 'Swap Requirements'}
-                {type === 'Donate' && 'Value'}
+                {exchangeType === 'SELL' ? 'Price ($)' : 'Exchange Value'}
               </label>
               <input
                 type="text"
-                disabled={type === 'Donate'}
-                value={type === 'Donate' ? 'Free' : value}
-                onChange={(e) => setValue(e.target.value)}
-                placeholder={
-                  type === 'Sell' ? 'e.g. 25' : 
-                  type === 'Borrow' ? 'e.g. 14' : 
-                  type === 'Swap' ? 'e.g. Raspberry Pi' : 'Free'
-                }
-                required={type !== 'Donate'}
-                className="w-full px-4 py-3 bg-[#0d111c]/90 border border-slate-700/60 focus:border-indigo-500/80 rounded-xl text-slate-100 placeholder-slate-500 outline-none transition-all duration-300 disabled:opacity-50"
+                disabled={exchangeType !== 'SELL'}
+                value={exchangeType !== 'SELL' ? 'Free' : price}
+                onChange={(e) => setPrice(e.target.value)}
+                placeholder={exchangeType === 'SELL' ? 'e.g. 25' : 'Free'}
+                required={exchangeType === 'SELL'}
+                className="w-full px-4 py-3 bg-[#0d111c]/90 border border-slate-700/60 focus:border-indigo-500/80 rounded-xl text-slate-100 placeholder-slate-500 outline-none transition-all duration-300 disabled:opacity-50 text-sm"
+              />
+            </div>
+
+            {/* Image URL Input */}
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-semibold text-slate-300 mb-2">Image URL</label>
+              <input
+                type="url"
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+                placeholder="e.g. https://example.com/item.jpg"
+                className="w-full px-4 py-3 bg-[#0d111c]/90 border border-slate-700/60 focus:border-indigo-500/80 rounded-xl text-slate-100 placeholder-slate-500 outline-none transition-all duration-300 text-sm"
               />
             </div>
 
@@ -130,11 +202,11 @@ export default function AddResource() {
               <label className="block text-sm font-semibold text-slate-300 mb-2">Preferred Handover Location</label>
               <input
                 type="text"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
+                value={meetupLocation}
+                onChange={(e) => setMeetupLocation(e.target.value)}
                 placeholder="e.g. Library 2nd floor, Student Union lobby"
                 required
-                className="w-full px-4 py-3 bg-[#0d111c]/90 border border-slate-700/60 focus:border-indigo-500/80 rounded-xl text-slate-100 placeholder-slate-500 outline-none transition-all duration-300"
+                className="w-full px-4 py-3 bg-[#0d111c]/90 border border-slate-700/60 focus:border-indigo-500/80 rounded-xl text-slate-100 placeholder-slate-500 outline-none transition-all duration-300 text-sm"
               />
             </div>
 
@@ -142,12 +214,12 @@ export default function AddResource() {
             <div className="sm:col-span-2">
               <label className="block text-sm font-semibold text-slate-300 mb-2">Detailed Description</label>
               <textarea
-                value={desc}
-                onChange={(e) => setDesc(e.target.value)}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
                 placeholder="State any details, notes, highlighting, missing components, or meet-up preferences."
                 rows="4"
                 required
-                className="w-full px-4 py-3 bg-[#0d111c]/90 border border-slate-700/60 focus:border-indigo-500/80 rounded-xl text-slate-100 placeholder-slate-500 outline-none transition-all duration-300 resize-none"
+                className="w-full px-4 py-3 bg-[#0d111c]/90 border border-slate-700/60 focus:border-indigo-500/80 rounded-xl text-slate-100 placeholder-slate-500 outline-none transition-all duration-300 resize-none text-sm"
               />
             </div>
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -6,118 +6,159 @@ import {
   User, 
   ShieldCheck, 
   Calendar, 
-  Shuffle, 
   Leaf, 
   CheckCircle,
-  MessageSquare
+  MessageSquare,
+  Image as ImageIcon,
+  Edit2,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
-
-const mockDetails = {
-  1: {
-    title: 'University Physics (14th Edition)',
-    category: 'Textbooks',
-    type: 'Sell',
-    value: '$45',
-    condition: 'Like New',
-    owner: 'Sarah Connor',
-    trustScore: '99%',
-    location: 'Engineering Building Lobby',
-    desc: 'Barely used, no highlights or markings. Standard textbook for Phys 101/102. I can meet up during weekdays before 3 PM.',
-    dateAdded: '2026-08-18'
-  },
-  2: {
-    title: 'Texas Instruments TI-84 Plus',
-    category: 'Electronics',
-    type: 'Borrow',
-    value: 'Free',
-    condition: 'Good',
-    owner: 'Jordan Vance',
-    trustScore: '95%',
-    location: 'Campus Library (Main floor)',
-    desc: 'Borrow for up to 3 weeks. Battery cover is missing, but functions perfectly. Useful for Algebra/Statistics.',
-    dateAdded: '2026-08-15'
-  },
-  3: {
-    title: 'Organic Chemistry Lab Coat (Medium)',
-    category: 'Laboratory',
-    type: 'Donate',
-    value: 'Free',
-    condition: 'Fair',
-    owner: 'Emily Watson',
-    trustScore: '92%',
-    location: 'Student Union Lounge',
-    desc: 'Washed and ready for use. Small ink stain on the left pocket. Best fits height 5\'5" - 5\'8".',
-    dateAdded: '2026-08-19'
-  },
-  4: {
-    title: 'Arduino Uno Ultimate Starter Kit',
-    category: 'Electronics',
-    type: 'Swap',
-    value: 'Swap',
-    condition: 'Excellent',
-    owner: 'Michael Scott',
-    trustScore: '97%',
-    location: 'Science Building Cafeteria',
-    desc: 'Looking to swap for a Raspberry Pi 3/4 or equivalent sensor module packages. Included components: breadboard, LCD, wires.',
-    dateAdded: '2026-08-14'
-  }
-};
+import { getResourceById, archiveResource } from '../services/resourceService';
+import { useAuth } from '../context/AuthContext';
 
 export default function ResourceDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [requestSent, setRequestSent] = useState(false);
-  const [selectedDays, setSelectedDays] = useState('7');
+  const { user } = useAuth();
 
-  // Fallback to item 1 if not found
-  const resource = mockDetails[id] || mockDetails[1];
+  const [resource, setResource] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const handleRequest = (e) => {
-    e.preventDefault();
-    setRequestSent(true);
-    setTimeout(() => {
-      // Navigate or show state
-    }, 3000);
+  // Fetch resource details on mount
+  useEffect(() => {
+    const fetchDetails = async () => {
+      try {
+        const res = await getResourceById(id);
+        if (res.success) {
+          setResource(res.data);
+        }
+      } catch (err) {
+        console.error('Error loading listing details:', err.message);
+        if (err.response && err.response.status === 404) {
+          setError('Resource not found.');
+        } else {
+          setError('Something went wrong. Please try again.');
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDetails();
+  }, [id]);
+
+  const handleArchive = async () => {
+    if (window.confirm('Are you sure you want to archive this resource?')) {
+      try {
+        const res = await archiveResource(id);
+        if (res.success) {
+          alert('Resource archived successfully.');
+          navigate('/my-listings');
+        }
+      } catch (err) {
+        alert(err.response?.data?.message || 'Failed to archive resource.');
+      }
+    }
   };
 
   const getBadgeStyle = (type) => {
-    switch (type) {
-      case 'Sell': return 'bg-rose-500/10 text-rose-300 border-rose-500/30';
-      case 'Borrow': return 'bg-indigo-500/10 text-indigo-300 border-indigo-500/30';
-      case 'Swap': return 'bg-purple-500/10 text-purple-300 border-purple-500/30';
-      case 'Donate': return 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30';
+    if (!type) return 'bg-slate-500/10 text-slate-300 border-slate-500/30';
+    switch (type.toUpperCase()) {
+      case 'SELL': return 'bg-rose-500/10 text-rose-300 border-rose-500/30';
+      case 'BORROW': return 'bg-indigo-500/10 text-indigo-300 border-indigo-500/30';
+      case 'SWAP': return 'bg-purple-500/10 text-purple-300 border-purple-500/30';
+      case 'DONATE': return 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30';
       default: return 'bg-slate-500/10 text-slate-300 border-slate-500/30';
     }
   };
 
+  const getStatusBadgeStyle = (status) => {
+    if (!status) return 'bg-slate-500/10 text-slate-400 border border-slate-700';
+    switch (status.toUpperCase()) {
+      case 'AVAILABLE': return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/25';
+      case 'RESERVED': return 'bg-amber-500/10 text-amber-400 border border-amber-500/25';
+      case 'EXCHANGED': return 'bg-slate-500/10 text-slate-400 border border-slate-700';
+      default: return 'bg-slate-500/10 text-slate-400 border border-slate-700';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-32">
+        <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (error || !resource) {
+    return (
+      <div className="max-w-md mx-auto text-center py-20 space-y-4">
+        <AlertTriangle className="h-12 w-12 text-rose-400 mx-auto" />
+        <p className="text-rose-400 font-semibold text-lg">{error || 'Resource not found.'}</p>
+        <Link to="/resources" className="inline-block bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-5 py-2.5 rounded-xl transition-all">
+          Back to Resources
+        </Link>
+      </div>
+    );
+  }
+
+  const isOwner = user && resource.owner && resource.owner.id === user.id;
+  const primaryImage = resource.images && resource.images.find(img => img.is_primary)?.image_url;
+
   return (
     <div className="space-y-6">
       {/* Back Button */}
-      <Link to="/marketplace" className="inline-flex items-center space-x-2 text-sm text-slate-400 hover:text-white transition-colors">
+      <Link to="/resources" className="inline-flex items-center space-x-2 text-sm text-slate-400 hover:text-white transition-colors">
         <ArrowLeft className="h-4 w-4" />
-        <span>Back to Marketplace</span>
+        <span>Back to Resources</span>
       </Link>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Left Columns: Main Details */}
         <div className="lg:col-span-2 space-y-6">
+          
+          {/* Large Image display */}
+          <div className="bg-[#161d30]/60 border border-[#242f4c] rounded-3xl overflow-hidden h-96 flex items-center justify-center relative shadow-lg">
+            {primaryImage ? (
+              <img 
+                src={primaryImage} 
+                alt={resource.title} 
+                className="w-full h-full object-cover" 
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center text-slate-500 bg-gradient-to-br from-indigo-950/20 to-purple-950/20 w-full h-full">
+                <ImageIcon className="h-16 w-16 text-slate-700 mb-2" />
+                <span className="text-xs uppercase font-bold tracking-widest">No Image Available</span>
+              </div>
+            )}
+          </div>
+
           <div className="bg-[#161d30]/60 border border-[#242f4c] rounded-3xl p-6 md:p-8 space-y-6">
             
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-3">
-                <span className={`text-xs uppercase font-extrabold tracking-widest px-3 py-1 rounded-full border ${getBadgeStyle(resource.type)}`}>
-                  {resource.type}
+                <span className={`text-xs uppercase font-extrabold tracking-widest px-3 py-1 rounded-full border ${getBadgeStyle(resource.exchange_type)}`}>
+                  {resource.exchange_type}
                 </span>
-                <span className="text-xs text-slate-500 font-semibold">Added on {resource.dateAdded}</span>
+                <span className={`text-xs uppercase font-extrabold px-3 py-1 rounded-full border ${getStatusBadgeStyle(resource.status)}`}>
+                  {resource.status}
+                </span>
+                <span className="text-xs text-slate-500 font-semibold">
+                  Added on {new Date(resource.created_at).toLocaleDateString()}
+                </span>
               </div>
               <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">{resource.title}</h1>
-              <p className="text-sm text-indigo-300 font-medium">{resource.category} • Condition: <span className="text-slate-300">{resource.condition}</span></p>
+              <p className="text-sm text-indigo-300 font-medium">
+                {resource.category} • Condition: <span className="text-slate-300">{resource.item_condition}</span>
+              </p>
             </div>
 
             <div className="border-t border-[#242f4c] pt-6 space-y-4">
               <h3 className="font-bold text-slate-200 text-lg">Description</h3>
-              <p className="text-sm text-slate-400 leading-relaxed whitespace-pre-wrap">{resource.desc}</p>
+              <p className="text-sm text-slate-400 leading-relaxed whitespace-pre-wrap">{resource.description}</p>
             </div>
 
             <div className="border-t border-[#242f4c] pt-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -126,7 +167,7 @@ export default function ResourceDetails() {
                 <MapPin className="h-5 w-5 text-indigo-400 mt-0.5 flex-shrink-0" />
                 <div>
                   <h4 className="text-xs uppercase font-extrabold tracking-wider text-slate-500">Preferred Handover Location</h4>
-                  <p className="text-sm text-slate-300 mt-1 font-semibold">{resource.location}</p>
+                  <p className="text-sm text-slate-300 mt-1 font-semibold">{resource.meetup_location}</p>
                   <p className="text-[10px] text-slate-500 mt-0.5">Physical meetups must follow campus safety regulations.</p>
                 </div>
               </div>
@@ -149,15 +190,15 @@ export default function ResourceDetails() {
         <div className="space-y-6">
           
           {/* Owner details card */}
-          <div className="bg-[#161d30]/60 border border-[#242f4c] rounded-3xl p-6">
+          <div className="bg-[#161d30]/60 border border-[#242f4c] rounded-3xl p-6 shadow-lg">
             <h3 className="text-xs uppercase font-bold tracking-widest text-slate-500 mb-4">Listed By</h3>
             
             <div className="flex items-center space-x-3 mb-6">
               <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center font-bold text-white shadow-md text-lg">
-                {resource.owner.charAt(0)}
+                {resource.owner.name.charAt(0).toUpperCase()}
               </div>
               <div>
-                <h4 className="font-bold text-slate-200">{resource.owner}</h4>
+                <h4 className="font-bold text-slate-200">{resource.owner.name}</h4>
                 <div className="flex items-center space-x-1.5 text-xs mt-0.5 text-slate-400 font-semibold">
                   <ShieldCheck className="h-4 w-4 text-emerald-400" />
                   <span>Verified Student</span>
@@ -165,73 +206,53 @@ export default function ResourceDetails() {
               </div>
             </div>
 
-            <div className="bg-[#0d111c]/60 border border-[#242f4c] rounded-xl p-4 flex justify-between items-center mb-6">
-              <div>
-                <span className="text-[10px] uppercase font-bold tracking-widest text-slate-500 block">Trust Score</span>
-                <span className="text-lg font-extrabold text-slate-200">{resource.trustScore}</span>
-              </div>
-              <span className="text-xs bg-indigo-500/15 text-indigo-300 px-2.5 py-1 rounded font-semibold border border-indigo-500/20">
-                Highly Reliable
+            <div className="border-t border-[#242f4c] pt-4">
+              <span className="text-[10px] uppercase font-bold tracking-widest text-slate-500 block mb-1">Exchange Terms</span>
+              <span className="text-2xl font-extrabold text-indigo-400">
+                {resource.exchange_type === 'SELL' ? `₹${resource.price}` : 'Free'}
               </span>
             </div>
 
-            {/* Main Interactive Form Area */}
-            {requestSent ? (
-              <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-2xl p-5 text-center space-y-3 animate-fadeIn">
-                <CheckCircle className="h-8 w-8 text-emerald-400 mx-auto" />
-                <h4 className="font-bold text-slate-200">Exchange Proposal Sent!</h4>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  We have notified {resource.owner}. Keep an eye on your requests dashboard and notifications panel.
-                </p>
-                <Link to="/dashboard" className="inline-block text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded-xl text-white mt-2 transition-colors">
-                  Go to Dashboard
-                </Link>
-              </div>
-            ) : (
-              <form onSubmit={handleRequest} className="space-y-4">
-                
-                {resource.type === 'Borrow' && (
-                  <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Borrow Duration</label>
-                    <select 
-                      value={selectedDays} 
-                      onChange={(e) => setSelectedDays(e.target.value)}
-                      className="w-full py-2 px-3 bg-[#0d111c]/90 border border-slate-700/60 rounded-xl text-slate-200 text-sm outline-none"
-                    >
-                      <option value="7">7 Days</option>
-                      <option value="14">14 Days</option>
-                      <option value="30">30 Days (Full Month)</option>
-                    </select>
-                  </div>
-                )}
+            {/* Check Owner Actions vs Peer Actions */}
+            <div className="border-t border-[#242f4c] pt-6 mt-6">
+              {isOwner ? (
+                <div className="space-y-3">
+                  <Link
+                    to={`/resources/${resource.id}/edit`}
+                    className="w-full flex items-center justify-center space-x-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition-all duration-300 shadow-lg shadow-indigo-600/20 hover:scale-[1.02]"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                    <span>Edit Listing</span>
+                  </Link>
+                  <button
+                    onClick={handleArchive}
+                    className="w-full flex items-center justify-center space-x-2 bg-rose-600/10 border border-rose-500/30 hover:bg-rose-600/20 text-rose-300 font-semibold py-3 rounded-xl transition-all duration-300 cursor-pointer"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span>Archive Resource</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Exchange Request Placeholder */}
+                  <button
+                    disabled
+                    className="w-full bg-[#1b233a] border border-[#2d3a5f] text-slate-500 font-bold py-3.5 rounded-xl cursor-not-allowed text-sm uppercase tracking-wide"
+                  >
+                    Exchange Request — Coming Soon
+                  </button>
 
-                {resource.type === 'Swap' && (
-                  <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Propose Swap Item</label>
-                    <select className="w-full py-2 px-3 bg-[#0d111c]/90 border border-slate-700/60 rounded-xl text-slate-200 text-sm outline-none">
-                      <option>Calculus Textbook (Fair)</option>
-                      <option>Engineering Ruler Set (Good)</option>
-                    </select>
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  className="w-full flex items-center justify-center space-x-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition-all duration-300 shadow-lg shadow-indigo-600/20 hover:scale-[1.02] cursor-pointer"
-                >
-                  <span>Propose Exchange ({resource.value})</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => alert('Chat feature placeholder clicked.')}
-                  className="w-full flex items-center justify-center space-x-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-3 rounded-xl border border-[#242f4c] transition-all hover:text-white"
-                >
-                  <MessageSquare className="h-4 w-4" />
-                  <span>Chat with {resource.owner.split(' ')[0]}</span>
-                </button>
-              </form>
-            )}
+                  <button
+                    type="button"
+                    onClick={() => alert('Chat feature placeholder clicked.')}
+                    className="w-full flex items-center justify-center space-x-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-3 rounded-xl border border-[#242f4c] transition-all hover:text-white"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    <span>Chat with {resource.owner.name.split(' ')[0]}</span>
+                  </button>
+                </div>
+              )}
+            </div>
 
           </div>
 
