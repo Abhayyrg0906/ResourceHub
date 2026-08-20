@@ -3,6 +3,7 @@ const cors = require('cors');
 require('dotenv').config();
 
 const healthRouter = require('./routes/health');
+const authRouter = require('./routes/auth');
 const db = require('./config/database');
 
 const app = express();
@@ -16,6 +17,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api', healthRouter);
+app.use('/api/auth', authRouter);
 
 // Fallback Route for Undefined Paths (404 Handler)
 app.use((req, res, next) => {

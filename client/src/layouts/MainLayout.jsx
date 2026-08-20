@@ -13,10 +13,12 @@ import {
   LogOut,
   GraduationCap
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function MainLayout() {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   const navItems = [
     { name: 'Marketplace', path: '/marketplace', icon: BookOpen },
@@ -71,12 +73,15 @@ export default function MainLayout() {
 
               <Link to="/profile" className="flex items-center space-x-2 p-1.5 rounded-lg text-slate-300 hover:bg-[#1f2942] hover:text-white transition-colors duration-300">
                 <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center font-bold text-white shadow-md">
-                  S
+                  {user && user.name ? user.name.charAt(0).toUpperCase() : 'U'}
                 </div>
               </Link>
 
               <button 
-                onClick={() => navigate('/login')} 
+                onClick={() => {
+                  logout();
+                  navigate('/login');
+                }} 
                 className="flex items-center space-x-1 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white bg-[#1f2942]/60 hover:bg-rose-600/20 hover:text-rose-300 border border-slate-600/30 rounded-lg transition-all duration-300"
               >
                 <LogOut className="h-3.5 w-3.5" />
@@ -133,6 +138,7 @@ export default function MainLayout() {
               <button
                 onClick={() => {
                   setIsOpen(false);
+                  logout();
                   navigate('/login');
                 }}
                 className="w-full text-left flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium text-rose-400 hover:bg-rose-500/10"

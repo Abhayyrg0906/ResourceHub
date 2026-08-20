@@ -1,25 +1,43 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Mail, Lock, ShieldCheck, CheckCircle } from 'lucide-react';
+import { User, Mail, Lock, ShieldCheck, CheckCircle, AlertCircle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function Register() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [department, setDepartment] = useState('');
+  const [yearOfStudy, setYearOfStudy] = useState('1');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const { register } = useAuth();
   const navigate = useNavigate();
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setMessage('Account created! A verification link has been sent to your university email (mock).');
+    setError('');
+    setMessage('');
+
+    const result = await register({
+      name,
+      email,
+      password,
+      department,
+      year_of_study: parseInt(yearOfStudy, 10)
+    });
+    setLoading(false);
+
+    if (result.success) {
+      setMessage(result.message || 'Registration successful! Redirecting to login...');
       setTimeout(() => {
         navigate('/login');
       }, 2500);
-    }, 1200);
+    } else {
+      setError(result.message);
+    }
   };
 
   return (
@@ -31,6 +49,13 @@ export default function Register() {
         <div className="mb-6 flex items-start space-x-2 bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 rounded-xl px-4 py-3 text-sm animate-fadeIn">
           <CheckCircle className="h-5 w-5 flex-shrink-0 text-emerald-400 mt-0.5" />
           <span>{message}</span>
+        </div>
+      )}
+
+      {error && (
+        <div className="mb-6 flex items-start space-x-2 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-xl px-4 py-3 text-sm animate-fadeIn">
+          <AlertCircle className="h-5 w-5 flex-shrink-0 text-rose-400 mt-0.5" />
+          <span>{error}</span>
         </div>
       )}
 
@@ -88,6 +113,34 @@ export default function Register() {
               className="w-full pl-10 pr-4 py-3 bg-[#0d111c]/90 border border-slate-700/60 focus:border-indigo-500/80 rounded-xl text-slate-100 placeholder-slate-500 outline-none transition-all duration-300"
             />
           </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-slate-300 mb-2">Department</label>
+          <input
+            type="text"
+            value={department}
+            onChange={(e) => setDepartment(e.target.value)}
+            placeholder="e.g. Computer Science, Physics"
+            required
+            className="w-full px-4 py-3 bg-[#0d111c]/90 border border-slate-700/60 focus:border-indigo-500/80 rounded-xl text-slate-100 placeholder-slate-500 outline-none transition-all duration-300 text-sm"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-slate-300 mb-2">Year of Study</label>
+          <select
+            value={yearOfStudy}
+            onChange={(e) => setYearOfStudy(e.target.value)}
+            className="w-full px-4 py-3 bg-[#0d111c]/90 border border-slate-700/60 focus:border-indigo-500/80 rounded-xl text-slate-200 outline-none transition-all duration-300 text-sm"
+          >
+            <option value="1">Year 1 (Freshman)</option>
+            <option value="2">Year 2 (Sophomore)</option>
+            <option value="3">Year 3 (Junior)</option>
+            <option value="4">Year 4 (Senior)</option>
+            <option value="5">Year 5</option>
+            <option value="6">Year 6</option>
+          </select>
         </div>
 
         <div className="flex items-start">

@@ -144,10 +144,92 @@ Make sure you have:
 
 ## Verification & API Endpoints
 
-- **Backend Health Check**: [http://localhost:5000/api/health](http://localhost:5000/api/health)
-- **Database Connection Check**: [http://localhost:5000/api/health/db](http://localhost:5000/api/health/db)
-  - Returns `{ "success": true, "database": "connected" }` when connection succeeds.
-- **Frontend Pages**: Open [http://localhost:5173](http://localhost:5173) in your browser. All pages (Dashboard, Marketplace, Profile, etc.) are accessible using the navigation bar.
+### System Diagnostics
+- **Backend Health Check**: `GET http://localhost:5000/api/health`
+- **Database Connection Check**: `GET http://localhost:5000/api/health/db`
+
+### Authentication Endpoints
+All authentication endpoints are mapped under `/api/auth`.
+
+#### 1. User Registration
+- **URL**: `POST /api/auth/register`
+- **Payload**:
+  ```json
+  {
+    "name": "Student Name",
+    "email": "student@university.edu",
+    "password": "SecurePassword123",
+    "department": "Computer Science",
+    "year_of_study": 2
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "success": true,
+    "message": "Registration successful. Account pending email verification.",
+    "data": {
+      "user": {
+        "id": 1,
+        "name": "Student Name",
+        "email": "student@university.edu",
+        "role": "STUDENT",
+        "status": "PENDING_VERIFICATION"
+      }
+    }
+  }
+  ```
+
+#### 2. User Login
+- **URL**: `POST /api/auth/login`
+- **Payload**:
+  ```json
+  {
+    "email": "student@university.edu",
+    "password": "SecurePassword123"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "success": true,
+    "message": "Login successful.",
+    "data": {
+      "token": "eyJhbGciOi...",
+      "user": {
+        "id": 1,
+        "name": "Student Name",
+        "email": "student@university.edu",
+        "role": "STUDENT",
+        "status": "PENDING_VERIFICATION",
+        "department": "Computer Science",
+        "year_of_study": 2
+      }
+    }
+  }
+  ```
+
+#### 3. Protected Profile Check
+- **URL**: `GET /api/auth/me`
+- **Headers**: `Authorization: Bearer <JWT_TOKEN>`
+- **Response**:
+  ```json
+  {
+    "success": true,
+    "message": "User details retrieved successfully.",
+    "data": {
+      "user": {
+        "id": 1,
+        "name": "Student Name",
+        "email": "student@university.edu",
+        "role": "STUDENT",
+        "status": "PENDING_VERIFICATION",
+        "department": "Computer Science",
+        "year_of_study": 2
+      }
+    }
+  }
+  ```
 
 ---
 
@@ -156,4 +238,5 @@ Make sure you have:
 - **Project Foundation (Completed)**: Scaffolding complete, Routing established, Layout and premium styling implemented, Node.js + Express backend running with health checks.
 - **Database Design (Completed)**: 10 tables normalized and mapped in a Mermaid ERD.
 - **Database Connection Pool (Completed)**: Express server connected to MySQL via connection pool with grace handlers and connection check APIs.
+- **Authentication & Security (Completed)**: Secure login, registration validation filters, password hashing (bcryptjs), session verification checks (JWT), protect route middlewares, role restriction parameters, and React Auth Context context providers.
 

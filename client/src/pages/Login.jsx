@@ -1,25 +1,34 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, LogIn, CheckCircle } from 'lucide-react';
+import { Mail, Lock, LogIn, CheckCircle, AlertCircle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-    // Simulate API delay
-    setTimeout(() => {
-      setLoading(false);
-      setMessage('Successfully logged in (mock session initialized)!');
+    setError('');
+    setMessage('');
+
+    const result = await login(email, password);
+    setLoading(false);
+
+    if (result.success) {
+      setMessage('Login successful! Loading dashboard...');
       setTimeout(() => {
         navigate('/dashboard');
       }, 1000);
-    }, 1200);
+    } else {
+      setError(result.message);
+    }
   };
 
   return (
@@ -34,6 +43,13 @@ export default function Login() {
         <div className="mb-6 flex items-center space-x-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl px-4 py-3 text-sm animate-fadeIn">
           <CheckCircle className="h-4 w-4 flex-shrink-0" />
           <span>{message}</span>
+        </div>
+      )}
+
+      {error && (
+        <div className="mb-6 flex items-center space-x-2 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-xl px-4 py-3 text-sm animate-fadeIn">
+          <AlertCircle className="h-4 w-4 flex-shrink-0" />
+          <span>{error}</span>
         </div>
       )}
 

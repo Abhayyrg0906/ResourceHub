@@ -1,6 +1,9 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
+// Auth Provider
+import { AuthProvider, useAuth } from './context/AuthContext';
+
 // Layout
 import MainLayout from './layouts/MainLayout';
 
@@ -19,34 +22,59 @@ import Profile from './pages/Profile';
 import Notifications from './pages/Notifications';
 import AdminDashboard from './pages/AdminDashboard';
 
+// Protected Route Wrapper
+function ProtectedRoute({ children }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0d111c] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+}
+
 export default function App() {
   return (
-    <Router>
-      <Routes>
-        {/* Public Landing & Authentication */}
-        <Route path="/" element={<LandingPage />} />
-        
-        {/* Auth Forms (Outside main layout) */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+    <AuthProvider>
+      <Router>
+        <Routes>
+          {/* Public Landing & Authentication */}
+          <Route path="/" element={<LandingPage />} />
+          
+          {/* Auth Forms (Outside main layout) */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
 
-        {/* Dashboard and Core App (Wrapped in MainLayout) */}
-        <Route element={<MainLayout />}>
-          <Route path="/dashboard" element={<StudentDashboard />} />
-          <Route path="/marketplace" element={<Marketplace />} />
-          <Route path="/resource/:id" element={<ResourceDetails />} />
-          <Route path="/add-resource" element={<AddResource />} />
-          <Route path="/my-listings" element={<MyListings />} />
-          <Route path="/my-requests" element={<MyRequests />} />
-          <Route path="/history" element={<ExchangeHistory />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/notifications" element={<Notifications />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-        </Route>
+          {/* Protected Core App (Wrapped in MainLayout and ProtectedRoute) */}
+          <Route element={
+            <ProtectedRoute>
+              <MainLayout />
+            </ProtectedRoute>
+          }>
+            <Route path="/dashboard" element={<StudentDashboard />} />
+            <Route path="/marketplace" element={<Marketplace />} />
+            <Route path="/resource/:id" element={<ResourceDetails />} />
+            <Route path="/add-resource" element={<AddResource />} />
+            <Route path="/my-listings" element={<MyListings />} />
+            <Route path="/my-requests" element={<MyRequests />} />
+            <Route path="/history" element={<ExchangeHistory />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/notifications" element={<Notifications />} />
+            <Route path="/admin" element={<AdminDashboard />} />
+          </Route>
 
-        {/* Catch-all Redirect */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Router>
+          {/* Catch-all Redirect */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
