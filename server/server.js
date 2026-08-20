@@ -1,0 +1,62 @@
+const express = require('express');
+const cors = require('cors');
+require('dotenv').config();
+
+const healthRouter = require('./routes/health');
+const db = require('./config/database');
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+// Enable Cross-Origin Resource Sharing
+app.use(cors());
+
+// Parse incoming JSON requests
+app.use(express.json());
+
+// Routes
+app.use('/api', healthRouter);
+
+// Fallback Route for Undefined Paths (404 Handler)
+app.use((req, res, next) => {
+  const error = new Error(`Not Found - ${req.originalUrl}`);
+  res.status(404);
+  next(error);
+});
+
+// Centralized Error Handling Middleware
+app.use((err, req, res, next) => {
+  const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+  res.status(statusCode).json({
+    status: 'error',
+    message: err.message || 'An unexpected server error occurred.',
+    stack: process.env.NODE_ENV === 'production' ? null : err.stack
+  });
+});
+
+// Test database connection at startup
+async function testDbConnection() {
+  try {
+    const connection = await db.getConnection();
+    console.log(`[OK] Connected to MySQL database successfully.`);
+    connection.release();
+  } catch (error) {
+    console.warn(`====================================================================`);
+    console.warn(`[WARNING] Could not establish connection to MySQL database:`);
+    console.warn(`          ${error.message}`);
+    console.warn(`          Please ensure MySQL is running and credentials in .env are correct.`);
+    console.warn(`          The server is still running, but database operations will fail.`);
+    console.warn(`====================================================================`);
+  }
+}
+
+// Start listening
+app.listen(PORT, () => {
+  console.log(`=========================================`);
+  console.log(` ResourceHub server running in ${process.env.NODE_ENV || 'development'} mode`);
+  console.log(` Local Server: http://localhost:${PORT}`);
+  console.log(` Health Check: http://localhost:${PORT}/api/health`);
+  console.log(`=========================================`);
+  
+  testDbConnection();
+});
