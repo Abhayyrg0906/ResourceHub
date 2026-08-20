@@ -93,7 +93,10 @@ Make sure you have:
    ```sql
    SOURCE database/schema.sql;
    ```
-   *(Or copy the script contents and run them directly in your SQL editor).* This will create the `resourcehub_db` database, establish all 10 tables, configure constraints/indexes, and seed category options.
+   > [!WARNING]
+   > The `schema.sql` script contains `DROP TABLE IF EXISTS` statements. Do **NOT** run this script in production or staging environments with live data, as it will permanently delete existing tables and data. Use only for local development, testing, or reset environments.
+   
+   *(Or copy the script contents and run them directly in your SQL editor).* This will create the `resourcehub` database, establish all 10 tables, configure constraints/indexes, and seed category options.
 
 ### 2. Backend Setup
 1. Open a terminal and navigate to the `server` directory:
@@ -114,7 +117,7 @@ Make sure you have:
    DB_PORT=3306
    DB_USER=root
    DB_PASSWORD=your_actual_mysql_password
-   DB_NAME=resourcehub_db
+   DB_NAME=resourcehub
    ```
 5. Start the backend in development (watch) mode:
    ```bash

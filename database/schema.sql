@@ -1,10 +1,15 @@
 -- ====================================================================
 -- ResourceHub Database Schema (MySQL)
 -- Part of Module M2 - Database Design
+--
+-- WARNING: This schema contains "DROP TABLE IF EXISTS" statements.
+-- Do NOT execute this script against a production database, as it
+-- will permanently delete existing data and structures.
+-- Use ONLY for development, testing, or reset environments.
 -- ====================================================================
 
-CREATE DATABASE IF NOT EXISTS resourcehub_db;
-USE resourcehub_db;
+CREATE DATABASE IF NOT EXISTS resourcehub;
+USE resourcehub;
 
 -- Disable foreign key checks temporarily during setup to ensure clean migration
 SET FOREIGN_KEY_CHECKS = 0;
