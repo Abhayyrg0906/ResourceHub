@@ -34,3 +34,18 @@ export const completeRequest = async (id) => {
   const response = await api.put(`/exchange-requests/${id}/complete`);
   return response.data;
 };
+
+export const generateQr = async (id) => {
+  const response = await api.post(`/exchange-requests/${id}/qr`);
+  return response.data;
+};
+
+export const verifyQr = async (id, verification_token) => {
+  const response = await api.post(`/exchange-requests/${id}/qr/verify`, { verification_token });
+  return response.data;
+};
+
+export const getQrStatus = async (id) => {
+  const response = await api.get(`/exchange-requests/${id}/qr`);
+  return response.data;
+};

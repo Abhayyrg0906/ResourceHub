@@ -566,6 +566,19 @@ const completeRequest = async (req, res) => {
       });
     }
 
+    // Verify QR verification is completed
+    const [qrRecords] = await db.query(
+      'SELECT status FROM qr_verifications WHERE transaction_id = ?',
+      [id]
+    );
+
+    if (qrRecords.length === 0 || qrRecords[0].status !== 'VERIFIED') {
+      return res.status(400).json({
+        success: false,
+        message: 'QR verification is required before completing this exchange.'
+      });
+    }
+
     // Acquire transaction connection
     conn = await db.getConnection();
     await conn.beginTransaction();

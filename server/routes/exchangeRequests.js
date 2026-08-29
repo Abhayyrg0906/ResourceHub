@@ -9,6 +9,11 @@ const {
   rejectRequest,
   completeRequest
 } = require('../controllers/exchangeController');
+const { 
+  generateQr,
+  verifyQr,
+  getQrStatus
+} = require('../controllers/qrController');
 const { protect } = require('../middleware/authMiddleware');
 
 // All exchange request endpoints require authentication
@@ -21,5 +26,10 @@ router.put('/:id/cancel', cancelRequest);
 router.put('/:id/accept', acceptRequest);
 router.put('/:id/reject', rejectRequest);
 router.put('/:id/complete', completeRequest);
+
+// QR Verification Endpoints
+router.post('/:id/qr', generateQr);
+router.post('/:id/qr/verify', verifyQr);
+router.get('/:id/qr', getQrStatus);
 
 module.exports = router;
