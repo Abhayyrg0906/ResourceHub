@@ -12,9 +12,12 @@ import {
   Image as ImageIcon,
   Edit2,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  PlusCircle,
+  X
 } from 'lucide-react';
-import { getResourceById, archiveResource } from '../services/resourceService';
+import { getResourceById, archiveResource, getResources } from '../services/resourceService';
+import { createRequest } from '../services/exchangeService';
 import { useAuth } from '../context/AuthContext';
 
 export default function ResourceDetails() {
@@ -25,6 +28,15 @@ export default function ResourceDetails() {
   const [resource, setResource] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Exchange Request Modal States
+  const [showRequestModal, setShowRequestModal] = useState(false);
+  const [borrowDurationDays, setBorrowDurationDays] = useState('');
+  const [offeredResourceId, setOfferedResourceId] = useState('');
+  const [myAvailableResources, setMyAvailableResources] = useState([]);
+  const [requestSubmitting, setRequestSubmitting] = useState(false);
+  const [requestError, setRequestError] = useState('');
+  const [requestSuccess, setRequestSuccess] = useState(false);
 
   // Fetch resource details on mount
   useEffect(() => {
@@ -49,6 +61,23 @@ export default function ResourceDetails() {
     fetchDetails();
   }, [id]);
 
+  // Fetch own available resources for SWAP exchange requests
+  useEffect(() => {
+    const fetchMyResources = async () => {
+      if (user && resource && resource.exchange_type === 'SWAP' && resource.owner.id !== user.id) {
+        try {
+          const res = await getResources({ owner_id: user.id, status: 'AVAILABLE' });
+          if (res.success) {
+            setMyAvailableResources(res.data);
+          }
+        } catch (err) {
+          console.error('Failed to load own available resources for swap:', err.message);
+        }
+      }
+    };
+    fetchMyResources();
+  }, [user, resource]);
+
   const handleArchive = async () => {
     if (window.confirm('Are you sure you want to archive this resource?')) {
       try {
@@ -60,6 +89,34 @@ export default function ResourceDetails() {
       } catch (err) {
         alert(err.response?.data?.message || 'Failed to archive resource.');
       }
+    }
+  };
+
+  const handleExchangeRequestSubmit = async (e) => {
+    e.preventDefault();
+    setRequestSubmitting(true);
+    setRequestError('');
+
+    try {
+      const payload = {
+        resource_id: parseInt(id, 10),
+        borrow_duration_days: resource.exchange_type === 'BORROW' ? parseInt(borrowDurationDays, 10) : null,
+        offered_resource_id: resource.exchange_type === 'SWAP' ? parseInt(offeredResourceId, 10) : null
+      };
+
+      const res = await createRequest(payload);
+      if (res.success) {
+        setRequestSuccess(true);
+        setTimeout(() => {
+          setShowRequestModal(false);
+          navigate('/exchange-requests');
+        }, 2000);
+      }
+    } catch (err) {
+      console.error('Failed to submit exchange request:', err.message);
+      setRequestError(err.response?.data?.message || 'Failed to request exchange. Please try again.');
+    } finally {
+      setRequestSubmitting(false);
     }
   };
 
@@ -108,7 +165,7 @@ export default function ResourceDetails() {
   const primaryImage = resource.images && resource.images.find(img => img.is_primary)?.image_url;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
       {/* Back Button */}
       <Link to="/resources" className="inline-flex items-center space-x-2 text-sm text-slate-400 hover:text-white transition-colors">
         <ArrowLeft className="h-4 w-4" />
@@ -131,7 +188,7 @@ export default function ResourceDetails() {
             ) : (
               <div className="flex flex-col items-center justify-center text-slate-500 bg-gradient-to-br from-indigo-950/20 to-purple-950/20 w-full h-full">
                 <ImageIcon className="h-16 w-16 text-slate-700 mb-2" />
-                <span className="text-xs uppercase font-bold tracking-widest">No Image Available</span>
+                <span className="text-xs uppercase font-bold tracking-widest text-slate-500">No Image Available</span>
               </div>
             )}
           </div>
@@ -234,17 +291,25 @@ export default function ResourceDetails() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {/* Exchange Request Placeholder */}
-                  <button
-                    disabled
-                    className="w-full bg-[#1b233a] border border-[#2d3a5f] text-slate-500 font-bold py-3.5 rounded-xl cursor-not-allowed text-sm uppercase tracking-wide"
-                  >
-                    Exchange Request — Coming Soon
-                  </button>
+                  {resource.status === 'AVAILABLE' ? (
+                    <button
+                      onClick={() => setShowRequestModal(true)}
+                      className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-xl transition-all duration-300 shadow-lg shadow-indigo-600/20 hover:scale-[1.01] text-sm uppercase tracking-wide cursor-pointer"
+                    >
+                      Request Exchange
+                    </button>
+                  ) : (
+                    <button
+                      disabled
+                      className="w-full bg-[#1b233a] border border-[#2d3a5f] text-slate-500 font-bold py-3.5 rounded-xl cursor-not-allowed text-sm uppercase tracking-wide"
+                    >
+                      Exchange Unavailable ({resource.status})
+                    </button>
+                  )}
 
                   <button
                     type="button"
-                    onClick={() => alert('Chat feature placeholder clicked.')}
+                    onClick={() => alert('Chat feature is coming soon.')}
                     className="w-full flex items-center justify-center space-x-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-3 rounded-xl border border-[#242f4c] transition-all hover:text-white"
                   >
                     <MessageSquare className="h-4 w-4" />
@@ -259,6 +324,122 @@ export default function ResourceDetails() {
         </div>
 
       </div>
+
+      {/* Exchange Request Modal */}
+      {showRequestModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0d111c]/80 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="bg-[#161d30] border border-[#242f4c] rounded-3xl p-6 md:p-8 max-w-md w-full relative shadow-2xl space-y-6">
+            
+            <button
+              onClick={() => setShowRequestModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="space-y-2">
+              <h2 className="text-2xl font-extrabold text-white tracking-tight">Request Exchange</h2>
+              <p className="text-xs text-slate-400">Confirm terms to request this item from {resource.owner.name}.</p>
+            </div>
+
+            {requestSuccess ? (
+              <div className="text-center py-8 space-y-3">
+                <CheckCircle className="h-12 w-12 text-emerald-400 mx-auto" />
+                <h3 className="text-lg font-bold text-slate-200">Request Sent Successfully!</h3>
+                <p className="text-xs text-slate-400">Redirecting to your requests dashboard...</p>
+              </div>
+            ) : (
+              <form onSubmit={handleExchangeRequestSubmit} className="space-y-5">
+                {requestError && (
+                  <div className="flex items-center space-x-2 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-xl px-4 py-2.5 text-xs">
+                    <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                    <span>{requestError}</span>
+                  </div>
+                )}
+
+                {/* Sell adaptation */}
+                {resource.exchange_type === 'SELL' && (
+                  <div className="bg-slate-900/50 border border-slate-800 p-4 rounded-2xl space-y-1">
+                    <span className="text-[10px] uppercase font-bold tracking-widest text-slate-500 block">Agreed Price Terms</span>
+                    <span className="text-xl font-extrabold text-rose-300">₹{resource.price}</span>
+                    <p className="text-[10px] text-slate-400 mt-1">This price is locked in for this exchange request.</p>
+                  </div>
+                )}
+
+                {/* Borrow adaptation */}
+                {resource.exchange_type === 'BORROW' && (
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-slate-300">Borrow Duration (Days)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="e.g. 14"
+                      value={borrowDurationDays}
+                      onChange={(e) => setBorrowDurationDays(e.target.value)}
+                      required
+                      className="w-full px-4 py-3 bg-[#0d111c]/90 border border-slate-700/60 focus:border-indigo-500/80 rounded-xl text-slate-100 placeholder-slate-500 outline-none text-sm"
+                    />
+                  </div>
+                )}
+
+                {/* Donate adaptation */}
+                {resource.exchange_type === 'DONATE' && (
+                  <p className="text-sm text-slate-300">
+                    This resource is listed as a donation (Free Gift). Press submit to request pick up coordinates.
+                  </p>
+                )}
+
+                {/* Swap adaptation */}
+                {resource.exchange_type === 'SWAP' && (
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-slate-300">Select Your Offered Resource</label>
+                    {myAvailableResources.length > 0 ? (
+                      <select
+                        value={offeredResourceId}
+                        onChange={(e) => setOfferedResourceId(e.target.value)}
+                        required
+                        className="w-full px-4 py-3 bg-[#0d111c]/90 border border-slate-700/60 focus:border-indigo-500/80 rounded-xl text-slate-200 outline-none text-sm cursor-pointer"
+                      >
+                        <option value="">-- Select an item to offer --</option>
+                        {myAvailableResources.map(r => (
+                          <option key={r.id} value={r.id}>{r.title} ({r.item_condition})</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl leading-relaxed">
+                          You do not have any AVAILABLE listings to offer for swap. You must list an item first.
+                        </div>
+                        <Link
+                          to="/resources/create"
+                          className="flex items-center justify-center space-x-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold py-2.5 rounded-xl border border-slate-700 transition-colors"
+                        >
+                          <PlusCircle className="h-4 w-4" />
+                          <span>Create a Listing</span>
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={requestSubmitting || (resource.exchange_type === 'SWAP' && myAvailableResources.length === 0)}
+                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-md shadow-indigo-600/15 disabled:opacity-50 cursor-pointer"
+                >
+                  {requestSubmitting ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
+                  ) : (
+                    <span>Submit Request</span>
+                  )}
+                </button>
+              </form>
+            )}
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

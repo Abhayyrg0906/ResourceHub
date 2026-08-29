@@ -86,7 +86,8 @@ export default function App() {
             <Route path="/resources/:id/edit" element={<EditResource />} />
 
             <Route path="/my-listings" element={<MyListings />} />
-            <Route path="/my-requests" element={<MyRequests />} />
+            <Route path="/my-requests" element={<Navigate to="/exchange-requests" replace />} />
+            <Route path="/exchange-requests" element={<MyRequests />} />
             <Route path="/history" element={<ExchangeHistory />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/notifications" element={<Notifications />} />

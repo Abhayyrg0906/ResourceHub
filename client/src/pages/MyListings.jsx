@@ -98,7 +98,7 @@ export default function MyListings() {
           <p className="text-sm text-slate-400 mt-1">Manage and track items you have made available for the campus community.</p>
         </div>
         <Link 
-          to="/my-requests"
+          to="/exchange-requests"
           className="text-xs font-bold text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 px-4 py-2.5 rounded-xl transition-all flex items-center space-x-1"
         >
           <span>Incoming Requests</span>

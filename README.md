@@ -231,12 +231,37 @@ All authentication endpoints are mapped under `/api/auth`.
   }
   ```
 
+### Exchange Request Endpoints
+All exchange request endpoints are mapped under `/api/exchange-requests` and require a valid JWT Session Token.
+
+#### 1. Create Request
+- **URL**: `POST /api/exchange-requests`
+- **Payload (SELL)**:
+  ```json
+  { "resource_id": 1 }
+  ```
+- **Payload (BORROW)**:
+  ```json
+  { "resource_id": 2, "borrow_duration_days": 14 }
+  ```
+- **Payload (SWAP)**:
+  ```json
+  { "resource_id": 3, "offered_resource_id": 7 }
+  ```
+
+#### 2. Get User Exchange Requests
+- **URL**: `GET /api/exchange-requests?status=PENDING&role=owner`
+- **Response**: List of incoming or sent requests matching active student ID.
+
 ---
 
 ## Current Status
 
-- **Project Foundation (Completed)**: Scaffolding complete, Routing established, Layout and premium styling implemented, Node.js + Express backend running with health checks.
+- **Project Foundation (Completed)**: Scaffolding complete, Routing established, Layout and premium styling implemented.
 - **Database Design (Completed)**: 10 tables normalized and mapped in a Mermaid ERD.
-- **Database Connection Pool (Completed)**: Express server connected to MySQL via connection pool with grace handlers and connection check APIs.
-- **Authentication & Security (Completed)**: Secure login, registration validation filters, password hashing (bcryptjs), session verification checks (JWT), protect route middlewares, role restriction parameters, and React Auth Context context providers.
+- **Database Connection Pool (Completed)**: Express server connected to MySQL via connection pool.
+- **Authentication & Security (Completed)**: Hashed logins, JWT token verification, route guards.
+- **Resource Management (Completed)**: Marketplace search, dynamic categories filters, sorting whitelists, detail views, creation, editing, and soft archiving.
+- **Exchange Requests & Transactions (Completed)**: Transactional requests management (SELL, BORROW, DONATE, SWAP) using MySQL transactions to manage atomic state handovers (`AVAILABLE` -> `RESERVED` -> `EXCHANGED`).
+
 
