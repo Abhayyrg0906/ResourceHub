@@ -23,12 +23,17 @@ router.post('/', createRequest);
 router.get('/', getRequests);
 router.get('/:id', getRequestById);
 router.put('/:id/cancel', cancelRequest);
+router.patch('/:id/cancel', cancelRequest);
 router.put('/:id/accept', acceptRequest);
+router.patch('/:id/accept', acceptRequest);
 router.put('/:id/reject', rejectRequest);
+router.patch('/:id/reject', rejectRequest);
 router.put('/:id/complete', completeRequest);
+router.patch('/:id/complete', completeRequest);
 
 // QR Verification Endpoints
 router.post('/:id/qr', generateQr);
+router.post('/:id/qr/generate', generateQr);
 router.post('/:id/qr/verify', verifyQr);
 router.get('/:id/qr', getQrStatus);
 

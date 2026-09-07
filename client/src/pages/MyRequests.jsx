@@ -5,30 +5,33 @@ import {
   ArrowUpRight, 
   ArrowDownLeft, 
   Calendar, 
-  Info,
-  Clock,
-  Sparkles,
-  QrCode,
-  AlertTriangle,
-  X,
-  Camera
+  Info, 
+  Clock, 
+  Sparkles, 
+  QrCode, 
+  AlertTriangle, 
+  X, 
+  Camera, 
+  Star 
 } from 'lucide-react';
 import { 
   getRequests, 
   cancelRequest, 
   acceptRequest, 
   rejectRequest, 
-  completeRequest,
-  generateQr,
-  verifyQr,
-  getQrStatus
+  completeRequest, 
+  generateQr, 
+  verifyQr, 
+  getQrStatus, 
+  createReview, 
+  getTransactionReviews 
 } from '../services/exchangeService';
 import { useAuth } from '../context/AuthContext';
 import { QRCodeCanvas } from 'qrcode.react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 
 // ----------------------------------------------------
-// Unified Handover Verification Section
+// Unified Handover Verification Section (M7 QR Handover)
 // ----------------------------------------------------
 function HandoverVerificationSection({ req, currentUser, onVerified, onScanTrigger, verifiedList }) {
   const isOwner = currentUser && Number(currentUser.id) === Number(req.owner_id);
@@ -145,7 +148,7 @@ function HandoverVerificationSection({ req, currentUser, onVerified, onScanTrigg
             </p>
             <button
               onClick={handleGenerate}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer"
+              className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer shadow-md shadow-indigo-600/10"
             >
               {isQrExpired ? 'Generate New QR' : 'Generate Handover QR'}
             </button>
@@ -193,7 +196,7 @@ function HandoverVerificationSection({ req, currentUser, onVerified, onScanTrigg
         <div className="border-t border-[#242f4c]/40 pt-4 mt-4 space-y-3">
           <h4 className="text-xs uppercase font-extrabold tracking-wider text-indigo-400">Exchange Handover</h4>
           <div className="bg-slate-900/60 border border-[#242f4c] rounded-2xl p-4 space-y-2 text-center max-w-xs mx-auto">
-            <div className="flex items-center justify-center space-x-2 text-rose-450 text-xs font-bold uppercase">
+            <div className="flex items-center justify-center space-x-2 text-rose-400 text-xs font-bold uppercase">
               <AlertTriangle className="h-4 w-4 text-rose-400" />
               <span className="text-rose-400">QR Expired</span>
             </div>
@@ -218,7 +221,7 @@ function HandoverVerificationSection({ req, currentUser, onVerified, onScanTrigg
             <button
               onClick={onScanTrigger}
               disabled={!isQrGenerated}
-              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-[#1b233a] disabled:text-slate-500 text-white font-bold py-2.5 rounded-xl text-xs uppercase tracking-wide cursor-pointer disabled:cursor-not-allowed flex items-center justify-center space-x-1"
+              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-[#1b233a] disabled:text-slate-500 text-white font-bold py-2.5 rounded-xl text-xs uppercase tracking-wide cursor-pointer disabled:cursor-not-allowed flex items-center justify-center space-x-1 shadow-md shadow-indigo-600/10"
             >
               <QrCode className="h-3.5 w-3.5" />
               <span>Scan QR Handover</span>
@@ -236,7 +239,258 @@ function HandoverVerificationSection({ req, currentUser, onVerified, onScanTrigg
 }
 
 // ----------------------------------------------------
-// Requester QR Scanning Modal Fallback
+// Completed Exchange Review Display Section (M8.3)
+// ----------------------------------------------------
+function CompletedReviewSection({ req, currentUser, reviews, onOpenReviewModal }) {
+  const isOwner = currentUser && Number(currentUser.id) === Number(req.owner_id);
+  const isRequester = currentUser && Number(currentUser.id) === Number(req.requester_id);
+  
+  if (!currentUser || (!isOwner && !isRequester)) return null;
+
+  // Find if current user has already submitted a review for this transaction
+  const myReview = reviews && reviews.find(r => 
+    Number(r.reviewer?.id || r.reviewer_id) === Number(currentUser.id)
+  );
+
+  if (myReview) {
+    return (
+      <div className="bg-emerald-950/20 border border-emerald-500/20 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-4">
+        <div className="flex items-center space-x-3 text-emerald-400">
+          <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
+          <div>
+            <h4 className="text-xs font-extrabold uppercase tracking-wider">Review Submitted ✓</h4>
+            <p className="text-[10px] text-slate-400 mt-0.5">
+              {myReview.review_text ? `"${myReview.review_text}"` : 'Thank you for rating your exchange partner.'}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center space-x-1 bg-slate-900/80 px-3 py-1.5 rounded-xl border border-[#242f4c] flex-shrink-0">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <Star
+              key={star}
+              className={`h-3.5 w-3.5 ${
+                star <= myReview.rating ? 'text-amber-400 fill-amber-400' : 'text-slate-600'
+              }`}
+            />
+          ))}
+          <span className="text-[11px] font-bold text-amber-300 ml-1.5">{myReview.rating}.0</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-slate-900/60 border border-[#242f4c] rounded-2xl p-4 sm:p-5 mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="space-y-1">
+        <div className="flex items-center space-x-2 text-emerald-400">
+          <CheckCircle2 className="h-4 w-4" />
+          <span className="text-xs font-bold uppercase tracking-wider">Exchange Completed ✓</span>
+        </div>
+        <p className="text-xs text-slate-200 font-semibold">How was your exchange experience?</p>
+        <p className="text-[11px] text-slate-400">Leave a review to help build trusted campus exchanges.</p>
+      </div>
+
+      <button
+        onClick={() => onOpenReviewModal(req)}
+        className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold px-4 py-2.5 rounded-xl text-xs flex items-center space-x-1.5 transition-all shadow-md shadow-amber-500/10 cursor-pointer flex-shrink-0 hover:scale-[1.02]"
+      >
+        <Star className="h-3.5 w-3.5 fill-slate-950 text-slate-950" />
+        <span>Leave a Review</span>
+      </button>
+    </div>
+  );
+}
+
+// ----------------------------------------------------
+// Review Submission Modal (M8.3)
+// ----------------------------------------------------
+function ReviewModal({ transaction, currentUser, onClose, onSuccess }) {
+  const [rating, setRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [reviewText, setReviewText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [successInfo, setSuccessInfo] = useState(null);
+
+  const isOwner = currentUser && Number(currentUser.id) === Number(transaction.owner_id);
+  const partnerName = isOwner ? transaction.requester_name : transaction.owner_name;
+
+  const ratingLabels = {
+    1: 'Poor - Bad experience',
+    2: 'Fair - Needs improvement',
+    3: 'Good - Met expectations',
+    4: 'Very Good - Smooth handover',
+    5: 'Excellent - Highly recommended!'
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!rating || rating < 1 || rating > 5) {
+      setError('Please select a rating from 1 to 5.');
+      return;
+    }
+
+    setSubmitting(true);
+    setError('');
+
+    try {
+      const res = await createReview({
+        transaction_id: transaction.id,
+        rating: Number(rating),
+        review_text: reviewText.trim() ? reviewText.trim() : undefined
+      });
+
+      if (res.success) {
+        setSuccessInfo(res.data);
+        setTimeout(() => {
+          onSuccess(transaction.id, res.data);
+          onClose();
+        }, 1800);
+      }
+    } catch (err) {
+      console.error('Failed to submit review:', err);
+      const status = err.response?.status;
+      if (status === 409) {
+        setError('You have already reviewed this exchange.');
+      } else if (status === 400) {
+        setError(err.response?.data?.message || 'Reviews can only be submitted after the exchange is completed.');
+      } else if (status === 403) {
+        setError('You are not authorized to review this exchange.');
+      } else {
+        setError(err.response?.data?.message || 'Unable to submit review. Please try again.');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0d111c]/80 backdrop-blur-sm p-4 animate-fadeIn">
+      <div className="bg-[#161d30] border border-[#242f4c] rounded-3xl p-6 md:p-8 max-w-md w-full relative shadow-2xl space-y-6">
+        
+        <button
+          onClick={onClose}
+          disabled={submitting}
+          className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors cursor-pointer disabled:opacity-50"
+        >
+          <X className="h-5 w-5" />
+        </button>
+
+        {successInfo ? (
+          <div className="text-center py-6 space-y-4">
+            <CheckCircle2 className="h-12 w-12 text-emerald-400 mx-auto animate-bounce" />
+            <h3 className="text-xl font-bold text-white tracking-tight">Review Submitted ✓</h3>
+            <p className="text-xs text-slate-300">Thank you for rating your exchange partner!</p>
+            {successInfo.reviewed_user?.trust_score !== undefined && (
+              <div className="bg-slate-900/60 border border-indigo-500/20 rounded-2xl p-4 text-xs text-slate-300 space-y-1">
+                <span className="text-indigo-400 font-bold block uppercase tracking-wider text-[10px]">Recipient Trust Updated</span>
+                <span className="text-sm font-extrabold text-white">Trust Score: {Number(successInfo.reviewed_user.trust_score).toFixed(2)}</span>
+              </div>
+            )}
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-1">
+              <h2 className="text-xl font-extrabold text-white tracking-tight">Leave a Review</h2>
+              <p className="text-xs text-slate-400">
+                Rate your exchange experience with <span className="text-slate-200 font-semibold">{partnerName}</span> for <span className="text-indigo-300 font-semibold">{transaction.resource_title}</span>.
+              </p>
+            </div>
+
+            {error && (
+              <div className="flex items-center space-x-2 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-xl px-4 py-2.5 text-xs">
+                <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            {/* Interactive 1-5 Star Rating */}
+            <div className="space-y-2 text-center bg-[#0d111c]/60 p-4 rounded-2xl border border-slate-800/80">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+                Rate your experience
+              </span>
+              
+              <div className="flex items-center justify-center space-x-2 py-1">
+                {[1, 2, 3, 4, 5].map((starValue) => {
+                  const isHighlighted = (hoverRating || rating) >= starValue;
+                  return (
+                    <button
+                      key={starValue}
+                      type="button"
+                      onClick={() => setRating(starValue)}
+                      onMouseEnter={() => setHoverRating(starValue)}
+                      onMouseLeave={() => setHoverRating(0)}
+                      className="p-1.5 focus:outline-none transition-transform hover:scale-125 cursor-pointer"
+                    >
+                      <Star
+                        className={`h-7 w-7 transition-colors ${
+                          isHighlighted
+                            ? 'text-amber-400 fill-amber-400'
+                            : 'text-slate-600 hover:text-slate-500'
+                        }`}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="h-4 text-[11px] font-medium text-amber-300">
+                {ratingLabels[hoverRating || rating] || 'Select 1 to 5 stars'}
+              </div>
+            </div>
+
+            {/* Optional Review Textarea */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between items-center text-xs">
+                <label className="font-semibold text-slate-300">Your Review (optional)</label>
+                <span className={`text-[10px] ${reviewText.length > 450 ? 'text-amber-400' : 'text-slate-500'}`}>
+                  {reviewText.length} / 500
+                </span>
+              </div>
+              <textarea
+                value={reviewText}
+                onChange={(e) => setReviewText(e.target.value.slice(0, 500))}
+                rows={3}
+                placeholder="How was the communication, item condition, and handover punctuality?"
+                className="w-full px-4 py-2.5 bg-[#0d111c]/90 border border-slate-700/60 focus:border-indigo-500/80 rounded-xl text-slate-100 placeholder-slate-500 outline-none text-xs resize-none transition-colors"
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex space-x-3 pt-2">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={submitting}
+                className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 rounded-xl text-xs transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting || !rating}
+                className="flex-1 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold py-2.5 rounded-xl text-xs transition-all shadow-md shadow-indigo-600/20 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center space-x-1.5"
+              >
+                {submitting ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Submitting...</span>
+                  </>
+                ) : (
+                  <span>Submit Review</span>
+                )}
+              </button>
+            </div>
+          </form>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
+// ----------------------------------------------------
+// Requester QR Scanning Modal Fallback (M7)
 // ----------------------------------------------------
 function RequesterScanModal({ reqId, onClose, onVerified }) {
   const [tokenInput, setTokenInput] = useState('');
@@ -406,8 +660,14 @@ export default function MyRequests() {
   // Scanning state
   const [scanningReqId, setScanningReqId] = useState(null);
   
+  // Review modal state
+  const [reviewingTransaction, setReviewingTransaction] = useState(null);
+  
   // Verified request markers (for real-time update triggers)
   const [verifiedList, setVerifiedList] = useState({});
+
+  // Reviews list map by transaction_id: { [txId]: Array<Review> }
+  const [reviewsMap, setReviewsMap] = useState({});
 
   const fetchRequests = async () => {
     if (!user) return;
@@ -421,7 +681,7 @@ export default function MyRequests() {
       setIncoming(incomingData);
       setOutgoing(outgoingData);
 
-      // Pre-populate verified state maps on load
+      // Pre-populate verified state maps on load for accepted requests
       const allAccepted = [...incomingData, ...outgoingData].filter(r => r.status.toUpperCase() === 'ACCEPTED');
       const verifiedMap = {};
       for (const req of allAccepted) {
@@ -435,6 +695,21 @@ export default function MyRequests() {
         }
       }
       setVerifiedList(verifiedMap);
+
+      // Pre-populate reviews map on load for completed requests
+      const allCompleted = [...incomingData, ...outgoingData].filter(r => r.status.toUpperCase() === 'COMPLETED');
+      const reviewsByTx = {};
+      for (const req of allCompleted) {
+        try {
+          const revRes = await getTransactionReviews(req.id);
+          if (revRes.success && revRes.data) {
+            reviewsByTx[req.id] = revRes.data;
+          }
+        } catch (e) {
+          // Silent catch
+        }
+      }
+      setReviewsMap(reviewsByTx);
       
     } catch (err) {
       console.error('Failed to load exchange requests:', err.message);
@@ -516,6 +791,17 @@ export default function MyRequests() {
     }
   };
 
+  const handleReviewSuccess = (transactionId, reviewData) => {
+    // Optimistically update reviewsMap with the newly created review
+    if (reviewData?.review) {
+      setReviewsMap(prev => ({
+        ...prev,
+        [transactionId]: [...(prev[transactionId] || []), reviewData.review]
+      }));
+    }
+    fetchRequests();
+  };
+
   const getStatusBadge = (status) => {
     switch (status.toUpperCase()) {
       case 'PENDING': return 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
@@ -588,7 +874,8 @@ export default function MyRequests() {
               {incoming.map(req => {
                 const isOwner = user && Number(user.id) === Number(req.owner_id);
                 const isAccepted = req.status.toUpperCase() === 'ACCEPTED';
-                const isVerified = verifiedList[req.id] || req.status.toUpperCase() === 'COMPLETED';
+                const isCompleted = req.status.toUpperCase() === 'COMPLETED';
+                const isVerified = verifiedList[req.id] || isCompleted;
 
                 return (
                   <div key={req.id} className="p-6 flex flex-col space-y-4 hover:bg-[#161d30]/80 transition-colors">
@@ -653,14 +940,26 @@ export default function MyRequests() {
                       </div>
                     </div>
 
-                    {/* QR display section for incoming requests */}
-                    <HandoverVerificationSection 
-                      req={req} 
-                      currentUser={user} 
-                      onVerified={(reqId) => setVerifiedList(prev => ({ ...prev, [reqId]: true }))} 
-                      onScanTrigger={() => setScanningReqId(req.id)}
-                      verifiedList={verifiedList}
-                    />
+                    {/* QR display section for accepted incoming requests */}
+                    {isAccepted && (
+                      <HandoverVerificationSection 
+                        req={req} 
+                        currentUser={user} 
+                        onVerified={(reqId) => setVerifiedList(prev => ({ ...prev, [reqId]: true }))} 
+                        onScanTrigger={() => setScanningReqId(req.id)}
+                        verifiedList={verifiedList}
+                      />
+                    )}
+
+                    {/* Review display section for completed incoming requests */}
+                    {isCompleted && (
+                      <CompletedReviewSection
+                        req={req}
+                        currentUser={user}
+                        reviews={reviewsMap[req.id] || []}
+                        onOpenReviewModal={(reqToReview) => setReviewingTransaction(reqToReview)}
+                      />
+                    )}
 
                   </div>
                 );
@@ -675,7 +974,8 @@ export default function MyRequests() {
               {outgoing.map(req => {
                 const isRequester = user && Number(user.id) === Number(req.requester_id);
                 const isAccepted = req.status.toUpperCase() === 'ACCEPTED';
-                const isVerified = verifiedList[req.id] || req.status.toUpperCase() === 'COMPLETED';
+                const isCompleted = req.status.toUpperCase() === 'COMPLETED';
+                const isVerified = verifiedList[req.id] || isCompleted;
 
                 return (
                   <div key={req.id} className="p-6 flex flex-col space-y-4 hover:bg-[#161d30]/80 transition-colors">
@@ -728,14 +1028,26 @@ export default function MyRequests() {
                       </div>
                     </div>
 
-                    {/* QR scanner display section for outgoing requests */}
-                    <HandoverVerificationSection 
-                      req={req} 
-                      currentUser={user} 
-                      onVerified={(reqId) => setVerifiedList(prev => ({ ...prev, [reqId]: true }))} 
-                      onScanTrigger={() => setScanningReqId(req.id)}
-                      verifiedList={verifiedList}
-                    />
+                    {/* QR scanner display section for accepted outgoing requests */}
+                    {isAccepted && (
+                      <HandoverVerificationSection 
+                        req={req} 
+                        currentUser={user} 
+                        onVerified={(reqId) => setVerifiedList(prev => ({ ...prev, [reqId]: true }))} 
+                        onScanTrigger={() => setScanningReqId(req.id)}
+                        verifiedList={verifiedList}
+                      />
+                    )}
+
+                    {/* Review display section for completed outgoing requests */}
+                    {isCompleted && (
+                      <CompletedReviewSection
+                        req={req}
+                        currentUser={user}
+                        reviews={reviewsMap[req.id] || []}
+                        onOpenReviewModal={(reqToReview) => setReviewingTransaction(reqToReview)}
+                      />
+                    )}
 
                   </div>
                 );
@@ -756,6 +1068,16 @@ export default function MyRequests() {
             setVerifiedList(prev => ({ ...prev, [scanningReqId]: true }));
             await fetchRequests();
           }}
+        />
+      )}
+
+      {/* Review submission modal for completed transactions */}
+      {reviewingTransaction && (
+        <ReviewModal
+          transaction={reviewingTransaction}
+          currentUser={user}
+          onClose={() => setReviewingTransaction(null)}
+          onSuccess={handleReviewSuccess}
         />
       )}
 

@@ -15,10 +15,14 @@ import { useAuth } from '../context/AuthContext';
 
 export default function StudentDashboard() {
   const { user } = useAuth();
+  const trustRatingValue = user && user.trust_score !== undefined 
+    ? `${Number(user.trust_score).toFixed(0)}%` 
+    : '100%';
+
   const userStats = [
     { label: 'Active Listings', value: '3 Items', icon: PlusCircle, color: 'text-indigo-400', bg: 'bg-indigo-500/10' },
     { label: 'Completed Swaps', value: '14 Trades', icon: CheckCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-    { label: 'Trust Rating', value: '98%', icon: ShieldCheck, color: 'text-pink-400', bg: 'bg-pink-500/10' },
+    { label: 'Trust Rating', value: trustRatingValue, icon: ShieldCheck, color: 'text-pink-400', bg: 'bg-pink-500/10' },
     { label: 'Carbon Saved', value: '18.4 kg', icon: Leaf, color: 'text-teal-400', bg: 'bg-teal-500/10' },
   ];
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { 
   BookOpen, 
@@ -14,11 +14,39 @@ import {
   GraduationCap
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { getUnreadCount } from '../services/notificationService';
 
 export default function MainLayout() {
   const [isOpen, setIsOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+
+  const fetchUnread = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await getUnreadCount();
+      if (res && res.success) {
+        setUnreadCount(res.unread_count || 0);
+      }
+    } catch (err) {
+      // Ignore background network error
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchUnread();
+
+    const handleUpdate = () => fetchUnread();
+    window.addEventListener('notificationsUpdated', handleUpdate);
+
+    const interval = setInterval(fetchUnread, 30000);
+
+    return () => {
+      window.removeEventListener('notificationsUpdated', handleUpdate);
+      clearInterval(interval);
+    };
+  }, [fetchUnread]);
 
   const navItems = [
     { name: 'Marketplace', path: '/resources', icon: BookOpen },
@@ -66,9 +94,17 @@ export default function MainLayout() {
 
             {/* Right Buttons */}
             <div className="hidden md:flex items-center space-x-4">
-              <Link to="/notifications" className="relative p-1.5 rounded-full text-slate-300 hover:bg-[#1f2942] hover:text-white transition-colors duration-300">
+              <Link 
+                to="/notifications" 
+                title={unreadCount > 0 ? `${unreadCount} unread notifications` : "Notifications"}
+                className="relative p-1.5 rounded-full text-slate-300 hover:bg-[#1f2942] hover:text-white transition-colors duration-300 flex items-center"
+              >
                 <Bell className="h-5 w-5" />
-                <span className="absolute top-0 right-0 block h-2.5 w-2.5 rounded-full bg-pink-500 ring-2 ring-[#0d111c]" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-pink-600 rounded-full ring-2 ring-[#0d111c] shadow-sm animate-pulse">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
               </Link>
 
               <Link to="/profile" className="flex items-center space-x-2 p-1.5 rounded-lg text-slate-300 hover:bg-[#1f2942] hover:text-white transition-colors duration-300">
@@ -91,9 +127,16 @@ export default function MainLayout() {
 
             {/* Mobile menu button */}
             <div className="md:hidden flex items-center space-x-3">
-              <Link to="/notifications" className="relative p-1.5 text-slate-300">
+              <Link 
+                to="/notifications" 
+                className="relative p-1.5 text-slate-300 flex items-center"
+              >
                 <Bell className="h-5 w-5" />
-                <span className="absolute top-0 right-0 block h-2.5 w-2.5 rounded-full bg-pink-500 ring-2 ring-[#0d111c]" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-pink-600 rounded-full ring-2 ring-[#0d111c]">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
               </Link>
 
               <button
@@ -127,6 +170,21 @@ export default function MainLayout() {
                   <span>{item.name}</span>
                 </NavLink>
               ))}
+              <NavLink
+                to="/notifications"
+                onClick={() => setIsOpen(false)}
+                className="flex items-center justify-between px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:bg-[#1f2942]"
+              >
+                <div className="flex items-center space-x-2">
+                  <Bell className="h-5 w-5" />
+                  <span>Notifications</span>
+                </div>
+                {unreadCount > 0 && (
+                  <span className="px-2 py-0.5 text-xs font-bold text-white bg-pink-600 rounded-full">
+                    {unreadCount}
+                  </span>
+                )}
+              </NavLink>
               <NavLink
                 to="/profile"
                 onClick={() => setIsOpen(false)}

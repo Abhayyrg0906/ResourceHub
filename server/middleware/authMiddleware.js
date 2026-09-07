@@ -34,7 +34,7 @@ const protect = async (req, res, next) => {
 
     // Retrieve active student details
     const [rows] = await db.query(
-      'SELECT id, name, email, role, status FROM users WHERE id = ?',
+      'SELECT id, name, email, role, status, department, year_of_study, trust_score FROM users WHERE id = ?',
       [decoded.userId]
     );
 

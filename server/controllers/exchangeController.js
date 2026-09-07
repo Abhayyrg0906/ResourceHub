@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { createNotification } = require('../services/notificationService');
 
 // Helper to check transition validity
 const isValidTransition = (currentStatus, targetStatus) => {
@@ -24,7 +25,7 @@ const createRequest = async (req, res) => {
 
     // 1. Verify resource exists
     const [resources] = await db.query(
-      'SELECT id, owner_id, status, exchange_type, price FROM resources WHERE id = ?',
+      'SELECT id, owner_id, status, exchange_type, price, title FROM resources WHERE id = ?',
       [resource_id]
     );
 
@@ -139,6 +140,16 @@ const createRequest = async (req, res) => {
         (resource_id, requester_id, status, offered_resource_id, borrow_duration_days, price_agreed) 
        VALUES (?, ?, 'PENDING', ?, ?, ?)`,
       [resource_id, requester_id, final_offered_id, final_borrow_days, price_agreed]
+    );
+
+    // M9.4: Notify resource owner of new exchange request
+    createNotification(
+      resource.owner_id,
+      'EXCHANGE_REQUEST',
+      'New Exchange Request',
+      `${req.user.name || 'A student'} requested an exchange for your resource "${resource.title}".`,
+      result.insertId,
+      'exchange_requests'
     );
 
     return res.status(201).json({
@@ -313,7 +324,10 @@ const cancelRequest = async (req, res) => {
     const userId = req.user.id;
 
     const [rows] = await db.query(
-      'SELECT requester_id, status FROM exchange_requests WHERE id = ?',
+      `SELECT er.id, er.requester_id, er.status, r.owner_id, r.title AS resource_title 
+       FROM exchange_requests er 
+       JOIN resources r ON er.resource_id = r.id 
+       WHERE er.id = ?`,
       [id]
     );
 
@@ -348,6 +362,16 @@ const cancelRequest = async (req, res) => {
       [id]
     );
 
+    // M9.4: Notify resource owner of cancellation
+    createNotification(
+      request.owner_id,
+      'REQUEST_CANCELLED',
+      'Exchange Request Cancelled',
+      `The exchange request for "${request.resource_title || 'resource'}" was cancelled by the requester.`,
+      request.id,
+      'exchange_requests'
+    );
+
     return res.status(200).json({
       success: true,
       message: 'Exchange request cancelled successfully.'
@@ -371,7 +395,7 @@ const acceptRequest = async (req, res) => {
 
     // Fetch request with resource parameters
     const [rows] = await db.query(
-      `SELECT er.id, er.status, er.offered_resource_id, er.resource_id, r.owner_id, r.status AS resource_status, r.exchange_type 
+      `SELECT er.id, er.status, er.offered_resource_id, er.resource_id, er.requester_id, r.title AS resource_title, r.owner_id, r.status AS resource_status, r.exchange_type 
        FROM exchange_requests er 
        JOIN resources r ON er.resource_id = r.id 
        WHERE er.id = ?`,
@@ -450,6 +474,16 @@ const acceptRequest = async (req, res) => {
     }
 
     await conn.commit();
+
+    // M9.4: Notify requester of accepted request
+    createNotification(
+      request.requester_id,
+      'REQUEST_ACCEPTED',
+      'Exchange Request Accepted',
+      `Your exchange request for "${request.resource_title || 'resource'}" has been accepted!`,
+      request.id,
+      'exchange_requests'
+    );
     return res.status(200).json({
       success: true,
       message: 'Exchange request accepted successfully.'
@@ -474,7 +508,7 @@ const rejectRequest = async (req, res) => {
     const userId = req.user.id;
 
     const [rows] = await db.query(
-      `SELECT er.status, r.owner_id 
+      `SELECT er.id, er.requester_id, er.status, r.owner_id, r.title AS resource_title 
        FROM exchange_requests er 
        JOIN resources r ON er.resource_id = r.id 
        WHERE er.id = ?`,
@@ -512,6 +546,16 @@ const rejectRequest = async (req, res) => {
       [id]
     );
 
+    // M9.4: Notify requester of rejected request
+    createNotification(
+      request.requester_id,
+      'REQUEST_REJECTED',
+      'Exchange Request Declined',
+      `Your exchange request for "${request.resource_title || 'resource'}" was declined.`,
+      request.id,
+      'exchange_requests'
+    );
+
     return res.status(200).json({
       success: true,
       message: 'Exchange request rejected successfully.'
@@ -534,7 +578,7 @@ const completeRequest = async (req, res) => {
     const userId = req.user.id;
 
     const [rows] = await db.query(
-      `SELECT er.id, er.status, er.offered_resource_id, er.resource_id, er.requester_id, r.owner_id, r.exchange_type 
+      `SELECT er.id, er.status, er.offered_resource_id, er.resource_id, er.requester_id, r.owner_id, r.title AS resource_title, r.exchange_type 
        FROM exchange_requests er 
        JOIN resources r ON er.resource_id = r.id 
        WHERE er.id = ?`,
@@ -604,6 +648,18 @@ const completeRequest = async (req, res) => {
     }
 
     await conn.commit();
+
+    // M9.4: Notify the other participant that transaction is complete
+    const notifyUserId = (Number(userId) === Number(request.owner_id)) ? request.requester_id : request.owner_id;
+    createNotification(
+      notifyUserId,
+      'EXCHANGE_COMPLETED',
+      'Exchange Completed',
+      `Your exchange for "${request.resource_title || 'resource'}" has been marked as completed. Please leave a review!`,
+      request.id,
+      'exchange_requests'
+    );
+
     return res.status(200).json({
       success: true,
       message: 'Transaction completed successfully.'

@@ -49,3 +49,24 @@ export const getQrStatus = async (id) => {
   const response = await api.get(`/exchange-requests/${id}/qr`);
   return response.data;
 };
+
+// Review & Ratings API calls
+export const createReview = async ({ transaction_id, rating, review_text }) => {
+  const payload = { transaction_id, rating };
+  if (review_text !== undefined && review_text !== null && review_text.trim() !== '') {
+    payload.review_text = review_text.trim();
+  }
+  const response = await api.post('/reviews', payload);
+  return response.data;
+};
+
+export const getUserReviews = async (userId) => {
+  const response = await api.get(`/reviews/user/${userId}`);
+  return response.data;
+};
+
+export const getTransactionReviews = async (transactionId) => {
+  const response = await api.get(`/reviews/transaction/${transactionId}`);
+  return response.data;
+};
+

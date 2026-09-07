@@ -182,7 +182,8 @@ const login = async (req, res) => {
           role: user.role,
           status: user.status,
           department: user.department,
-          year_of_study: user.year_of_study
+          year_of_study: user.year_of_study,
+          trust_score: parseFloat(user.trust_score || 100.00)
         }
       }
     });
@@ -209,7 +210,8 @@ const me = async (req, res) => {
         role: req.user.role,
         status: req.user.status,
         department: req.user.department,
-        year_of_study: req.user.year_of_study
+        year_of_study: req.user.year_of_study,
+        trust_score: parseFloat(req.user.trust_score || 100.00)
       }
     }
   });

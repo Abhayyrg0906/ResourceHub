@@ -7,6 +7,8 @@ const authRouter = require('./routes/auth');
 const resourcesRouter = require('./routes/resources');
 const categoriesRouter = require('./routes/categories');
 const exchangeRequestsRouter = require('./routes/exchangeRequests');
+const reviewsRouter = require('./routes/reviews');
+const notificationsRouter = require('./routes/notifications');
 const db = require('./config/database');
 
 const app = express();
@@ -24,6 +26,8 @@ app.use('/api/auth', authRouter);
 app.use('/api/resources', resourcesRouter);
 app.use('/api/categories', categoriesRouter);
 app.use('/api/exchange-requests', exchangeRequestsRouter);
+app.use('/api/reviews', reviewsRouter);
+app.use('/api/notifications', notificationsRouter);
 
 // Fallback Route for Undefined Paths (404 Handler)
 app.use((req, res, next) => {

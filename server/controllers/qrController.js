@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const db = require('../config/database');
+const { createNotification } = require('../services/notificationService');
 
 // 1. Generate QR Code verification token (Owner only)
 const generateQr = async (req, res) => {
@@ -115,7 +116,7 @@ const verifyQr = async (req, res) => {
 
     // Verify transaction exists and fetch details
     const [transactions] = await db.query(
-      `SELECT er.id, er.requester_id, r.owner_id, er.status AS request_status 
+      `SELECT er.id, er.requester_id, r.owner_id, r.title AS resource_title, er.status AS request_status 
        FROM exchange_requests er 
        JOIN resources r ON er.resource_id = r.id 
        WHERE er.id = ?`,
@@ -231,6 +232,17 @@ const verifyQr = async (req, res) => {
     );
 
     await conn.commit();
+
+    // M9.4: Notify owner that QR handover has been verified
+    createNotification(
+      transaction.owner_id,
+      'QR_VERIFIED',
+      'Handover QR Verified',
+      `The requester has successfully scanned and verified your handover QR code for "${transaction.resource_title || 'resource'}".`,
+      transaction.id,
+      'exchange_requests'
+    );
+
     return res.status(200).json({
       success: true,
       message: 'Exchange verified successfully.'

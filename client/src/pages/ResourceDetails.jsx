@@ -254,11 +254,18 @@ export default function ResourceDetails() {
               <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center font-bold text-white shadow-md text-lg">
                 {resource.owner.name.charAt(0).toUpperCase()}
               </div>
-              <div>
+              <div className="flex-1">
                 <h4 className="font-bold text-slate-200">{resource.owner.name}</h4>
-                <div className="flex items-center space-x-1.5 text-xs mt-0.5 text-slate-400 font-semibold">
-                  <ShieldCheck className="h-4 w-4 text-emerald-400" />
-                  <span>Verified Student</span>
+                <div className="flex flex-wrap items-center gap-2 text-xs mt-0.5">
+                  <div className="flex items-center space-x-1 text-emerald-400 font-semibold">
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    <span className="text-[11px]">Verified Student</span>
+                  </div>
+                  {resource.owner.trust_score !== undefined && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/10 border border-indigo-500/20 text-indigo-300">
+                      Trust: {Number(resource.owner.trust_score).toFixed(1)}%
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
