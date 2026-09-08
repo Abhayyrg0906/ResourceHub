@@ -143,7 +143,7 @@ const createRequest = async (req, res) => {
     );
 
     // M9.4: Notify resource owner of new exchange request
-    createNotification(
+    await createNotification(
       resource.owner_id,
       'EXCHANGE_REQUEST',
       'New Exchange Request',
@@ -363,7 +363,7 @@ const cancelRequest = async (req, res) => {
     );
 
     // M9.4: Notify resource owner of cancellation
-    createNotification(
+    await createNotification(
       request.owner_id,
       'REQUEST_CANCELLED',
       'Exchange Request Cancelled',
@@ -476,7 +476,7 @@ const acceptRequest = async (req, res) => {
     await conn.commit();
 
     // M9.4: Notify requester of accepted request
-    createNotification(
+    await createNotification(
       request.requester_id,
       'REQUEST_ACCEPTED',
       'Exchange Request Accepted',
@@ -547,7 +547,7 @@ const rejectRequest = async (req, res) => {
     );
 
     // M9.4: Notify requester of rejected request
-    createNotification(
+    await createNotification(
       request.requester_id,
       'REQUEST_REJECTED',
       'Exchange Request Declined',
@@ -651,7 +651,7 @@ const completeRequest = async (req, res) => {
 
     // M9.4: Notify the other participant that transaction is complete
     const notifyUserId = (Number(userId) === Number(request.owner_id)) ? request.requester_id : request.owner_id;
-    createNotification(
+    await createNotification(
       notifyUserId,
       'EXCHANGE_COMPLETED',
       'Exchange Completed',

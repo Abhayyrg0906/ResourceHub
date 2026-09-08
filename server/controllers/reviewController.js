@@ -170,7 +170,7 @@ const createReview = async (req, res) => {
     await conn.commit();
 
     // M9.4: Notify reviewed user of new rating & review
-    createNotification(
+    await createNotification(
       reviewed_id,
       'REVIEW_RECEIVED',
       'New Review Received',

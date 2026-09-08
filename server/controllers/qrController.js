@@ -234,7 +234,7 @@ const verifyQr = async (req, res) => {
     await conn.commit();
 
     // M9.4: Notify owner that QR handover has been verified
-    createNotification(
+    await createNotification(
       transaction.owner_id,
       'QR_VERIFIED',
       'Handover QR Verified',

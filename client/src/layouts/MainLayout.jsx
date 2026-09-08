@@ -48,14 +48,17 @@ export default function MainLayout() {
     };
   }, [fetchUnread]);
 
-  const navItems = [
+  const baseNavItems = [
     { name: 'Marketplace', path: '/resources', icon: BookOpen },
     { name: 'Dashboard', path: '/dashboard', icon: User },
     { name: 'Add Resource', path: '/resources/create', icon: PlusCircle },
     { name: 'My Listings', path: '/my-listings', icon: FolderHeart },
     { name: 'History', path: '/history', icon: History },
-    { name: 'Admin', path: '/admin', icon: ShieldAlert },
   ];
+
+  const navItems = user && user.role === 'ADMIN'
+    ? [...baseNavItems, { name: 'Admin', path: '/admin', icon: ShieldAlert }]
+    : baseNavItems;
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0d111c] text-slate-100 selection:bg-indigo-500 selection:text-white">
