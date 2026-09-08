@@ -231,37 +231,90 @@ All authentication endpoints are mapped under `/api/auth`.
   }
   ```
 
-### Exchange Request Endpoints
-All exchange request endpoints are mapped under `/api/exchange-requests` and require a valid JWT Session Token.
+### Exchange Request & Handover Endpoints
+All exchange request endpoints are mapped under `/api/exchange-requests` and require a valid JWT Session Token (`Authorization: Bearer <token>`).
 
 #### 1. Create Request
 - **URL**: `POST /api/exchange-requests`
-- **Payload (SELL)**:
-  ```json
-  { "resource_id": 1 }
-  ```
-- **Payload (BORROW)**:
-  ```json
-  { "resource_id": 2, "borrow_duration_days": 14 }
-  ```
-- **Payload (SWAP)**:
-  ```json
-  { "resource_id": 3, "offered_resource_id": 7 }
-  ```
+- **Payload (SELL)**: `{ "resource_id": 1 }`
+- **Payload (BORROW)**: `{ "resource_id": 2, "borrow_duration_days": 14 }`
+- **Payload (SWAP)**: `{ "resource_id": 3, "offered_resource_id": 7 }`
 
 #### 2. Get User Exchange Requests
 - **URL**: `GET /api/exchange-requests?status=PENDING&role=owner`
 - **Response**: List of incoming or sent requests matching active student ID.
 
+#### 3. Request Lifecycle Actions
+- **Accept**: `PUT /api/exchange-requests/:id/accept` (Resource transitions to `RESERVED`)
+- **Reject**: `PUT /api/exchange-requests/:id/reject`
+- **Cancel**: `PUT /api/exchange-requests/:id/cancel`
+- **Complete**: `PUT /api/exchange-requests/:id/complete` (Requires verified QR; resource transitions to `EXCHANGED`)
+
+### QR-Based Verification Endpoints
+- **Generate QR Token**: `POST /api/exchange-requests/:id/qr` (Owner only)
+- **Get QR Status**: `GET /api/exchange-requests/:id/qr` (Owner receives token; requester receives masked status)
+- **Verify Handover**: `POST /api/exchange-requests/:id/qr/verify` (Requester scans token; atomic verification)
+
+### Reviews & Trust Score Endpoints
+Mapped under `/api/reviews`.
+- **Submit Review**: `POST /api/reviews` (1–5 rating; atomic trust score calculation `Avg Rating * 20`)
+- **Get User Review Stats**: `GET /api/reviews/user/:userId`
+
+### Notifications Endpoints
+Mapped under `/api/notifications`. All scoped strictly to authenticated user.
+- **Get Notifications**: `GET /api/notifications?page=1&limit=20`
+- **Get Unread Count**: `GET /api/notifications/unread-count`
+- **Mark Single Read**: `PATCH /api/notifications/:id/read`
+- **Mark All Read**: `PATCH /api/notifications/read-all`
+
+### Administration & Moderation Endpoints
+Mapped under `/api/admin` (Requires `ADMIN` role).
+- **Platform Statistics**: `GET /api/admin/stats`
+- **User Management**: `GET /api/admin/users`, `PATCH /api/admin/users/:id/status`
+- **Resource Moderation**: `GET /api/admin/resources`, `PATCH /api/admin/resources/:id/status`
+- **Report Management**: `GET /api/admin/reports`, `PATCH /api/admin/reports/:id/status`
+
 ---
 
-## Current Status
+## Test Suites & Regression Verification
 
-- **Project Foundation (Completed)**: Scaffolding complete, Routing established, Layout and premium styling implemented.
-- **Database Design (Completed)**: 10 tables normalized and mapped in a Mermaid ERD.
-- **Database Connection Pool (Completed)**: Express server connected to MySQL via connection pool.
-- **Authentication & Security (Completed)**: Hashed logins, JWT token verification, route guards.
-- **Resource Management (Completed)**: Marketplace search, dynamic categories filters, sorting whitelists, detail views, creation, editing, and soft archiving.
-- **Exchange Requests & Transactions (Completed)**: Transactional requests management (SELL, BORROW, DONATE, SWAP) using MySQL transactions to manage atomic state handovers (`AVAILABLE` -> `RESERVED` -> `EXCHANGED`).
+Automated regression test suites verify complete system health and milestone correctness:
+
+```bash
+# Full System Regression Suite (M1–M11)
+# Full System Regression Suite (M1–M11)
+node scratch/verify_full_system.js
+
+# Advanced Search & Filtering Suite (M12)
+node scratch/verify_search_filters.js # M12 Search & Filtering (65/65 tests)
+
+# Individual Milestone Regression Suites
+node scratch/verify_admin.js          # M10 Admin & Moderation (16/16 tests)
+node scratch/verify_notifications.js  # M9 Notifications & Isolation (14/14 tests)
+node scratch/verify_qr.js             # M7 QR Verification (11/11 tests)
+node scratch/verify_reviews.js        # M8 Reviews & Trust Score (8/8 tests)
+
+# Frontend Build Validation
+cd client && npm run build
+```
+
+---
+
+## Milestone Implementation Status
+
+- [x] **M1 – Project Setup**: Full-stack scaffolding, dependencies, environment management, and routing.
+- [x] **M2 – Database Design**: 10 normalized MySQL tables, indexes, cascading rules, and relational integrity.
+- [x] **M3 – MySQL Integration**: Express server connected to MySQL via connection pool with health probes (`/api/health` & `/api/health/db`).
+- [x] **M4 – Authentication & Security**: Password hashing with bcrypt, JWT authorization tokens, role guards (`STUDENT` vs `ADMIN`), and sensitive data masking.
+- [x] **M5 – Resource Management**: Multi-category marketplace, condition grading, search & filters, exchange modes (`SELL`, `BORROW`, `DONATE`, `SWAP`), and soft deletion.
+- [x] **M6 – Exchange Requests & Transactions**: End-to-end request management, duplicate prevention, and atomic resource state transitions (`AVAILABLE` -> `RESERVED` -> `EXCHANGED`).
+- [x] **M7 – QR-Based Exchange Verification**: Secure physical handover token generation, scanner verification, anti-replay guards, and timeout controls.
+- [x] **M8 – Reviews, Ratings & Trust Score**: Post-completion peer reviews (1–5 stars), duplicate review blocks, and transparent trust score computation (`Avg Rating * 20`).
+- [x] **M9 – Notifications & User Engagement**: Real-time event notifications, live unread badge, read tracking, and strict tenant isolation.
+- [x] **M10 – Admin & Moderation System**: Executive dashboard metrics, user status controls (`ACTIVE`, `SUSPENDED`), self-deactivation safeguards, and listing/report moderation.
+- [x] **M11 – Final System Integration & QA**: Complete cross-milestone test execution (69/69 passed), authorization audit, production readiness validation, and static build verification.
+- [x] **M12 – Advanced Search & Filtering**: Multi-criteria query engine (`search`, `category_id`, `exchange_type`, `min_price`, `max_price`, `condition`, `location`), 6 sorting modes including relevance & owner trust score, composite performance indexes, active filter chips, and responsive marketplace UI (65/65 tests passed).
+
+
 
 

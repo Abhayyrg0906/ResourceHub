@@ -120,14 +120,29 @@ const createResource = async (req, res) => {
   }
 };
 
-// 3. Get All Resources
+// 3. Get All Resources (with M12 Advanced Search & Filtering)
 const getResources = async (req, res) => {
   try {
-    const { category_id, exchange_type, item_condition, status, owner_id, search, sort, page, limit } = req.query;
+    const { 
+      category_id, 
+      exchange_type, 
+      item_condition, 
+      condition, 
+      status, 
+      owner_id, 
+      search, 
+      min_price, 
+      max_price, 
+      location, 
+      meetup_location, 
+      sort, 
+      page, 
+      limit 
+    } = req.query;
 
     // Pagination limits
     const parsedPage = Math.max(parseInt(page, 10) || 1, 1);
-    let parsedLimit = Math.max(parseInt(limit, 10) || 10, 1);
+    let parsedLimit = Math.max(parseInt(limit, 10) || 12, 1);
     if (parsedLimit > 50) parsedLimit = 50; // Cap limit at 50
     const offset = (parsedPage - 1) * parsedLimit;
 
@@ -148,6 +163,7 @@ const getResources = async (req, res) => {
         r.created_at, 
         r.updated_at,
         u.name AS owner_name,
+        u.trust_score AS owner_trust_score,
         ri.image_url
       FROM resources r
       JOIN categories c ON r.category_id = c.id
@@ -170,8 +186,13 @@ const getResources = async (req, res) => {
       if (status.toUpperCase() === 'ALL') {
         whereClauses.push("r.status != 'ARCHIVED'");
       } else {
-        whereClauses.push('r.status = ?');
-        queryParams.push(status.toUpperCase());
+        const validStatuses = ['AVAILABLE', 'RESERVED', 'EXCHANGED'];
+        if (validStatuses.includes(status.toUpperCase())) {
+          whereClauses.push('r.status = ?');
+          queryParams.push(status.toUpperCase());
+        } else {
+          whereClauses.push("r.status = 'AVAILABLE'");
+        }
       }
     } else {
       whereClauses.push("r.status = 'AVAILABLE'");
@@ -179,33 +200,71 @@ const getResources = async (req, res) => {
 
     // Filter Category
     if (category_id) {
-      whereClauses.push('r.category_id = ?');
-      queryParams.push(parseInt(category_id, 10));
+      const parsedCat = parseInt(category_id, 10);
+      if (!isNaN(parsedCat)) {
+        whereClauses.push('r.category_id = ?');
+        queryParams.push(parsedCat);
+      }
     }
 
     // Filter Exchange Type
     if (exchange_type) {
-      whereClauses.push('r.exchange_type = ?');
-      queryParams.push(exchange_type.toUpperCase());
+      const validTypes = ['SELL', 'BORROW', 'DONATE', 'SWAP'];
+      if (validTypes.includes(exchange_type.toUpperCase())) {
+        whereClauses.push('r.exchange_type = ?');
+        queryParams.push(exchange_type.toUpperCase());
+      }
     }
 
-    // Filter Item Condition
-    if (item_condition) {
-      whereClauses.push('r.item_condition = ?');
-      queryParams.push(item_condition.toUpperCase());
+    // Filter Item Condition (support condition or item_condition)
+    const rawCondition = item_condition || condition;
+    if (rawCondition) {
+      const validConditions = ['NEW', 'LIKE_NEW', 'GOOD', 'FAIR', 'POOR'];
+      if (validConditions.includes(rawCondition.toUpperCase())) {
+        whereClauses.push('r.item_condition = ?');
+        queryParams.push(rawCondition.toUpperCase());
+      }
     }
 
     // Filter Owner ID
     if (owner_id) {
-      whereClauses.push('r.owner_id = ?');
-      queryParams.push(parseInt(owner_id, 10));
+      const parsedOwner = parseInt(owner_id, 10);
+      if (!isNaN(parsedOwner)) {
+        whereClauses.push('r.owner_id = ?');
+        queryParams.push(parsedOwner);
+      }
     }
 
-    // Filter Search
-    if (search && search.trim() !== '') {
+    // Filter Search (Case-insensitive partial matching on title and description)
+    const trimmedSearch = search && typeof search === 'string' ? search.trim() : '';
+    if (trimmedSearch !== '') {
       whereClauses.push('(r.title LIKE ? OR r.description LIKE ?)');
-      const searchWildcard = `%${search.trim()}%`;
+      const searchWildcard = `%${trimmedSearch}%`;
       queryParams.push(searchWildcard, searchWildcard);
+    }
+
+    // Filter Price Range (min_price and max_price)
+    if (min_price !== undefined && min_price !== null && min_price !== '') {
+      const parsedMin = parseFloat(min_price);
+      if (!isNaN(parsedMin) && parsedMin >= 0) {
+        whereClauses.push('r.price >= ?');
+        queryParams.push(parsedMin);
+      }
+    }
+
+    if (max_price !== undefined && max_price !== null && max_price !== '') {
+      const parsedMax = parseFloat(max_price);
+      if (!isNaN(parsedMax) && parsedMax >= 0) {
+        whereClauses.push('r.price <= ?');
+        queryParams.push(parsedMax);
+      }
+    }
+
+    // Filter Meetup Location (partial matching)
+    const rawLocation = location || meetup_location;
+    if (rawLocation && typeof rawLocation === 'string' && rawLocation.trim() !== '') {
+      whereClauses.push('r.meetup_location LIKE ?');
+      queryParams.push(`%${rawLocation.trim()}%`);
     }
 
     // Combine WHERE clauses
@@ -215,37 +274,63 @@ const getResources = async (req, res) => {
       countSql += combinedWhere;
     }
 
-    // Execute count query
-    const [countRows] = await db.query(countSql, queryParams);
+    // Count query executes with where-clause params
+    const countQueryParams = [...queryParams];
+    const [countRows] = await db.query(countSql, countQueryParams);
     const total = countRows[0].total;
 
     // Sorting whitelists to protect against SQL injections
     let orderClause = ' ORDER BY r.created_at DESC';
+    const selectQueryParams = [...queryParams];
+
     if (sort) {
       switch (sort.toLowerCase()) {
         case 'latest':
-          orderClause = ' ORDER BY r.created_at DESC';
+        case 'newest':
+          orderClause = ' ORDER BY r.created_at DESC, r.id DESC';
+          break;
+        case 'oldest':
+          orderClause = ' ORDER BY r.created_at ASC, r.id ASC';
           break;
         case 'price_low':
-          // Price sorting treats null prices as infinite/lowest depending on context, standard ASC puts nulls first/last.
-          orderClause = ' ORDER BY r.price ASC';
+        case 'price_asc':
+          orderClause = ' ORDER BY (r.price IS NULL), r.price ASC, r.id DESC';
           break;
         case 'price_high':
-          orderClause = ' ORDER BY r.price DESC';
+        case 'price_desc':
+          orderClause = ' ORDER BY (r.price IS NULL), r.price DESC, r.id DESC';
+          break;
+        case 'trust_score':
+        case 'highest_trust':
+          orderClause = ' ORDER BY u.trust_score DESC, r.created_at DESC, r.id DESC';
+          break;
+        case 'relevant':
+        case 'relevance':
+          if (trimmedSearch !== '') {
+            orderClause = ' ORDER BY (CASE WHEN r.title LIKE ? THEN 1 WHEN r.description LIKE ? THEN 2 ELSE 3 END) ASC, r.created_at DESC, r.id DESC';
+            const searchWildcard = `%${trimmedSearch}%`;
+            selectQueryParams.push(searchWildcard, searchWildcard);
+          } else {
+            orderClause = ' ORDER BY r.created_at DESC, r.id DESC';
+          }
           break;
         case 'title':
-          orderClause = ' ORDER BY r.title ASC';
+          orderClause = ' ORDER BY r.title ASC, r.id DESC';
           break;
+        default:
+          orderClause = ' ORDER BY r.created_at DESC, r.id DESC';
       }
+    } else {
+      orderClause = ' ORDER BY r.created_at DESC, r.id DESC';
     }
     selectSql += orderClause;
 
     // Pagination LIMIT & OFFSET
     selectSql += ' LIMIT ? OFFSET ?';
-    queryParams.push(parsedLimit, offset);
+    selectQueryParams.push(parsedLimit, offset);
 
-    // Execute query
-    const [rows] = await db.query(selectSql, queryParams);
+    // Execute select query
+    const [rows] = await db.query(selectSql, selectQueryParams);
 
     // Map rows to match output structure
     const resources = rows.map(r => ({
@@ -255,7 +340,7 @@ const getResources = async (req, res) => {
       category_id: r.category_id,
       category: r.category,
       exchange_type: r.exchange_type,
-      price: r.price,
+      price: r.price !== null ? parseFloat(r.price) : null,
       item_condition: r.item_condition,
       meetup_location: r.meetup_location,
       status: r.status,
@@ -263,7 +348,8 @@ const getResources = async (req, res) => {
       updated_at: r.updated_at,
       owner: {
         id: r.owner_id,
-        name: r.owner_name
+        name: r.owner_name,
+        trust_score: parseFloat(r.owner_trust_score || 100.00)
       },
       image_url: r.image_url
     }));

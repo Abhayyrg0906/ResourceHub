@@ -94,8 +94,11 @@ CREATE TABLE resources (
     CONSTRAINT check_resource_price_required_for_sell CHECK (exchange_type != 'SELL' OR price IS NOT NULL)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Indexing for marketplace display filtering
+-- Indexing for marketplace display filtering & search
 CREATE INDEX idx_resources_status_category ON resources(status, category_id);
+CREATE INDEX idx_resources_status_type ON resources(status, exchange_type);
+CREATE INDEX idx_resources_status_price ON resources(status, price);
+CREATE INDEX idx_resources_status_created ON resources(status, created_at);
 CREATE INDEX idx_resources_owner ON resources(owner_id);
 
 
