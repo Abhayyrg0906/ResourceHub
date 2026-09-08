@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   CheckCircle2, 
   XCircle, 
@@ -12,8 +13,10 @@ import {
   AlertTriangle, 
   X, 
   Camera, 
-  Star 
+  Star,
+  MessageSquare 
 } from 'lucide-react';
+import chatService from '../services/chatService';
 import { 
   getRequests, 
   cancelRequest, 
@@ -651,11 +654,27 @@ function RequesterScanModal({ reqId, onClose, onVerified }) {
 export default function MyRequests() {
   const { user } = useAuth();
   
+  const navigate = useNavigate();
   const [incoming, setIncoming] = useState([]);
   const [outgoing, setOutgoing] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('incoming');
   const [actionLoadingId, setActionLoadingId] = useState(null);
+
+  const handleStartChat = async (req) => {
+    try {
+      const res = await chatService.getOrCreateConversation({
+        transactionId: req.id,
+        resourceId: req.resource_id
+      });
+      if (res && res.success && res.conversation) {
+        navigate(`/chat/${res.conversation.id}`);
+      }
+    } catch (err) {
+      console.error('Failed to open chat:', err);
+      alert(err.response?.data?.message || 'Could not open conversation.');
+    }
+  };
   
   // Scanning state
   const [scanningReqId, setScanningReqId] = useState(null);
@@ -935,6 +954,15 @@ export default function MyRequests() {
                                 <span>Complete Transaction</span>
                               </button>
                             )}
+
+                            <button
+                              onClick={() => handleStartChat(req)}
+                              className="px-3 py-1.5 rounded-lg bg-[#1f2942] hover:bg-[#242f4c] text-slate-300 hover:text-white border border-[#2d3a5a] text-xs font-semibold flex items-center space-x-1.5 transition-colors cursor-pointer"
+                              title="Chat with requester"
+                            >
+                              <MessageSquare className="h-3.5 w-3.5 text-indigo-400" />
+                              <span>Chat</span>
+                            </button>
                           </div>
                         )}
                       </div>
@@ -1023,6 +1051,15 @@ export default function MyRequests() {
                                 <span>Complete Transaction</span>
                               </button>
                             )}
+
+                            <button
+                              onClick={() => handleStartChat(req)}
+                              className="px-3 py-1.5 rounded-lg bg-[#1f2942] hover:bg-[#242f4c] text-slate-300 hover:text-white border border-[#2d3a5a] text-xs font-semibold flex items-center space-x-1.5 transition-colors cursor-pointer"
+                              title="Chat with owner"
+                            >
+                              <MessageSquare className="h-3.5 w-3.5 text-indigo-400" />
+                              <span>Chat</span>
+                            </button>
                           </div>
                         )}
                       </div>

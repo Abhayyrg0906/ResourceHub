@@ -22,6 +22,7 @@ import ExchangeHistory from './pages/ExchangeHistory';
 import Profile from './pages/Profile';
 import Notifications from './pages/Notifications';
 import AdminDashboard from './pages/AdminDashboard';
+import Chat from './pages/Chat';
 
 // Protected Route Wrapper
 function ProtectedRoute({ children }) {
@@ -91,6 +92,8 @@ export default function App() {
             <Route path="/history" element={<ExchangeHistory />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/notifications" element={<Notifications />} />
+            <Route path="/chat" element={<Chat />} />
+            <Route path="/chat/:conversationId" element={<Chat />} />
             <Route path="/admin" element={<AdminDashboard />} />
           </Route>
 

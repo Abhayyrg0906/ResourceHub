@@ -15,6 +15,8 @@ USE resourcehub;
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- Drop tables if they already exist
+DROP TABLE IF EXISTS messages;
+DROP TABLE IF EXISTS conversations;
 DROP TABLE IF EXISTS reports;
 DROP TABLE IF EXISTS wishlist;
 DROP TABLE IF EXISTS notifications;
@@ -258,3 +260,51 @@ INSERT INTO categories (name, slug) VALUES
 ('Project Components', 'project-components'),
 ('Stationery', 'stationery'),
 ('Other', 'other');
+
+
+-- ====================================================================
+-- 12. CONVERSATIONS TABLE
+-- Tracks direct communication between resource owners and requesters.
+-- ====================================================================
+CREATE TABLE conversations (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    resource_id INT NOT NULL,
+    transaction_id INT NULL,
+    participant1_id INT NOT NULL,
+    participant2_id INT NOT NULL,
+    last_message_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (transaction_id) REFERENCES exchange_requests(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    FOREIGN KEY (participant1_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (participant2_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+
+    UNIQUE KEY uq_conv_res_participants (resource_id, participant1_id, participant2_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX idx_conversations_p1_last_msg ON conversations(participant1_id, last_message_at);
+CREATE INDEX idx_conversations_p2_last_msg ON conversations(participant2_id, last_message_at);
+CREATE INDEX idx_conversations_transaction ON conversations(transaction_id);
+
+
+-- ====================================================================
+-- 13. MESSAGES TABLE
+-- Stores individual chat messages in conversations.
+-- ====================================================================
+CREATE TABLE messages (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    conversation_id INT NOT NULL,
+    sender_id INT NOT NULL,
+    message_text TEXT NOT NULL,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX idx_messages_conv_created ON messages(conversation_id, created_at);
+CREATE INDEX idx_messages_conv_read ON messages(conversation_id, is_read);
+

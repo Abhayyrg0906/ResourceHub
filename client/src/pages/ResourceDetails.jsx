@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { getResourceById, archiveResource, getResources } from '../services/resourceService';
 import { createRequest } from '../services/exchangeService';
+import chatService from '../services/chatService';
 import { useAuth } from '../context/AuthContext';
 
 export default function ResourceDetails() {
@@ -37,6 +38,26 @@ export default function ResourceDetails() {
   const [requestSubmitting, setRequestSubmitting] = useState(false);
   const [requestError, setRequestError] = useState('');
   const [requestSuccess, setRequestSuccess] = useState(false);
+  const [initiatingChat, setInitiatingChat] = useState(false);
+
+  const handleStartChat = async () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    try {
+      setInitiatingChat(true);
+      const res = await chatService.getOrCreateConversation({ resourceId: resource.id });
+      if (res && res.success && res.conversation) {
+        navigate(`/chat/${res.conversation.id}`);
+      }
+    } catch (err) {
+      console.error('Failed to start chat:', err);
+      alert(err.response?.data?.message || 'Could not open chat.');
+    } finally {
+      setInitiatingChat(false);
+    }
+  };
 
   // Fetch resource details on mount
   useEffect(() => {
@@ -316,11 +337,12 @@ export default function ResourceDetails() {
 
                   <button
                     type="button"
-                    onClick={() => alert('Chat feature is coming soon.')}
-                    className="w-full flex items-center justify-center space-x-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-3 rounded-xl border border-[#242f4c] transition-all hover:text-white"
+                    onClick={handleStartChat}
+                    disabled={initiatingChat}
+                    className="w-full flex items-center justify-center space-x-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 hover:text-indigo-200 font-semibold py-3 rounded-xl border border-indigo-500/30 transition-all shadow-sm disabled:opacity-50"
                   >
                     <MessageSquare className="h-4 w-4" />
-                    <span>Chat with {resource.owner.name.split(' ')[0]}</span>
+                    <span>{initiatingChat ? 'Opening Chat...' : `Chat with ${resource.owner.name.split(' ')[0]}`}</span>
                   </button>
                 </div>
               )}

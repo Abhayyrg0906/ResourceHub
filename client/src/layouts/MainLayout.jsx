@@ -11,7 +11,8 @@ import {
   Menu, 
   X, 
   LogOut,
-  GraduationCap
+  GraduationCap,
+  MessageSquare
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getUnreadCount } from '../services/notificationService';
@@ -51,6 +52,7 @@ export default function MainLayout() {
   const baseNavItems = [
     { name: 'Marketplace', path: '/resources', icon: BookOpen },
     { name: 'Dashboard', path: '/dashboard', icon: User },
+    { name: 'Messages', path: '/chat', icon: MessageSquare },
     { name: 'Add Resource', path: '/resources/create', icon: PlusCircle },
     { name: 'My Listings', path: '/my-listings', icon: FolderHeart },
     { name: 'History', path: '/history', icon: History },
@@ -98,6 +100,14 @@ export default function MainLayout() {
             {/* Right Buttons */}
             <div className="hidden md:flex items-center space-x-4">
               <Link 
+                to="/chat" 
+                title="Messages"
+                className="relative p-1.5 rounded-full text-slate-300 hover:bg-[#1f2942] hover:text-white transition-colors duration-300 flex items-center"
+              >
+                <MessageSquare className="h-5 w-5" />
+              </Link>
+
+              <Link 
                 to="/notifications" 
                 title={unreadCount > 0 ? `${unreadCount} unread notifications` : "Notifications"}
                 className="relative p-1.5 rounded-full text-slate-300 hover:bg-[#1f2942] hover:text-white transition-colors duration-300 flex items-center"
@@ -130,6 +140,14 @@ export default function MainLayout() {
 
             {/* Mobile menu button */}
             <div className="md:hidden flex items-center space-x-3">
+              <Link 
+                to="/chat" 
+                className="relative p-1.5 text-slate-300 flex items-center"
+                title="Messages"
+              >
+                <MessageSquare className="h-5 w-5" />
+              </Link>
+
               <Link 
                 to="/notifications" 
                 className="relative p-1.5 text-slate-300 flex items-center"

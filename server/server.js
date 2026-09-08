@@ -1,3 +1,4 @@
+const http = require('http');
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
@@ -10,6 +11,8 @@ const exchangeRequestsRouter = require('./routes/exchangeRequests');
 const reviewsRouter = require('./routes/reviews');
 const notificationsRouter = require('./routes/notifications');
 const adminRouter = require('./routes/admin');
+const chatRouter = require('./routes/chat');
+const { initSocket } = require('./socket');
 const db = require('./config/database');
 
 const app = express();
@@ -30,6 +33,7 @@ app.use('/api/exchange-requests', exchangeRequestsRouter);
 app.use('/api/reviews', reviewsRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/chat', chatRouter);
 
 // Fallback Route for Undefined Paths (404 Handler)
 app.use((req, res, next) => {
@@ -48,6 +52,10 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Create HTTP server and initialize WebSockets
+const server = http.createServer(app);
+initSocket(server);
+
 // Test database connection at startup
 async function testDbConnection() {
   try {
@@ -65,7 +73,7 @@ async function testDbConnection() {
 }
 
 // Start listening
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`=========================================`);
   console.log(` ResourceHub server running in ${process.env.NODE_ENV || 'development'} mode`);
   console.log(` Local Server: http://localhost:${PORT}`);
@@ -74,3 +82,4 @@ app.listen(PORT, () => {
   
   testDbConnection();
 });
+
