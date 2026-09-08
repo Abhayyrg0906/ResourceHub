@@ -14,7 +14,8 @@ import {
   Ban,
   Clock,
   Sparkles,
-  ExternalLink
+  ExternalLink,
+  Heart
 } from 'lucide-react';
 import { 
   getNotifications, 
@@ -99,7 +100,9 @@ export default function Notifications() {
       handleMarkAsRead(n.id);
     }
     // Navigate to related resource or request if available
-    if (n.related_id) {
+    if (n.type === 'WISHLIST_AVAILABLE' && n.related_id) {
+      navigate(`/resources/${n.related_id}`);
+    } else if (n.related_id) {
       navigate('/exchange-requests');
     }
   };
@@ -177,6 +180,13 @@ export default function Notifications() {
           color: 'text-amber-400',
           bg: 'bg-amber-500/10 border-amber-500/30',
           label: 'Review'
+        };
+      case 'WISHLIST_AVAILABLE':
+        return {
+          icon: Heart,
+          color: 'text-pink-400',
+          bg: 'bg-pink-500/10 border-pink-500/30',
+          label: 'Wishlist Alert'
         };
       default:
         return {
@@ -338,7 +348,7 @@ export default function Notifications() {
                       </span>
                       {n.related_id && (
                         <span className="flex items-center gap-1 text-indigo-400 group-hover:underline">
-                          <span>View exchange</span>
+                          <span>{n.type === 'WISHLIST_AVAILABLE' ? 'View resource' : 'View exchange'}</span>
                           <ExternalLink className="h-2.5 w-2.5" />
                         </span>
                       )}

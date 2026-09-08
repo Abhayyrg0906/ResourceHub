@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { notifyWishlistAvailability, notifyWishlistCategoryMatch } = require('../services/notificationService');
 
 // 1. Get Categories
 const getCategories = async (req, res) => {
@@ -98,6 +99,11 @@ const createResource = async (req, res) => {
         [resourceId, image_url]
       );
     }
+
+    // M14: Asynchronously notify users with items in this category in their wishlist
+    notifyWishlistCategoryMatch(resourceId, category_id, title, owner_id).catch(e => {
+      console.error('[ResourceController] Error notifying category wishlist users:', e);
+    });
 
     return res.status(201).json({
       success: true,
@@ -576,6 +582,13 @@ const updateResource = async (req, res) => {
     } else {
       // If user clears the image, delete primary image
       await db.query('DELETE FROM resource_images WHERE resource_id = ? AND is_primary = TRUE', [resourceId]);
+    }
+
+    // M14: Asynchronously notify users who wishlisted this resource of its availability
+    if (status.toUpperCase() === 'AVAILABLE') {
+      notifyWishlistAvailability(resourceId).catch(e => {
+        console.error('[ResourceController] Error notifying wishlist availability:', e);
+      });
     }
 
     return res.status(200).json({

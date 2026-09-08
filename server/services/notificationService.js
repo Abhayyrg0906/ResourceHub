@@ -39,6 +39,76 @@ const createNotification = async (userId, type, title, message, relatedId = null
   }
 };
 
+/**
+ * Notifies all users who have bookmarked a resource when it becomes AVAILABLE.
+ * Fails gracefully to never disrupt the parent transaction.
+ * 
+ * @param {number} resourceId 
+ */
+const notifyWishlistAvailability = async (resourceId) => {
+  try {
+    const [wishlistUsers] = await db.query(
+      `SELECT DISTINCT w.user_id, r.title, r.owner_id
+       FROM wishlist w
+       JOIN resources r ON w.resource_id = r.id
+       WHERE w.resource_id = ? AND w.user_id != r.owner_id`,
+      [resourceId]
+    );
+
+    for (const entry of wishlistUsers) {
+      await createNotification(
+        entry.user_id,
+        'WISHLIST_AVAILABLE',
+        'Wishlist Item Available!',
+        `Good news! "${entry.title}" from your wishlist is now available for exchange.`,
+        resourceId,
+        'resources'
+      );
+    }
+  } catch (err) {
+    console.error('[NotificationService] Error notifying wishlist availability:', err.message);
+  }
+};
+
+/**
+ * Notifies users who have saved items in the same category when a new resource is listed.
+ * Fails gracefully to never disrupt resource creation.
+ * 
+ * @param {number} resourceId 
+ * @param {number} categoryId 
+ * @param {string} title 
+ * @param {number} ownerId 
+ */
+const notifyWishlistCategoryMatch = async (resourceId, categoryId, title, ownerId) => {
+  try {
+    const [catRows] = await db.query('SELECT name FROM categories WHERE id = ?', [categoryId]);
+    const catName = catRows.length > 0 ? catRows[0].name : '';
+
+    const [matchingUsers] = await db.query(
+      `SELECT DISTINCT w.user_id
+       FROM wishlist w
+       JOIN resources r ON w.resource_id = r.id
+       WHERE r.category_id = ? AND w.user_id != ?`,
+      [categoryId, ownerId]
+    );
+
+    for (const entry of matchingUsers) {
+      await createNotification(
+        entry.user_id,
+        'WISHLIST_AVAILABLE',
+        'New Item in Your Saved Category',
+        `A new item "${title}" was just listed in ${catName ? `the ${catName} category` : 'a category you have in your wishlist'}.`,
+        resourceId,
+        'resources'
+      );
+    }
+  } catch (err) {
+    console.error('[NotificationService] Error notifying category match:', err.message);
+  }
+};
+
 module.exports = {
-  createNotification
+  createNotification,
+  notifyWishlistAvailability,
+  notifyWishlistCategoryMatch
 };

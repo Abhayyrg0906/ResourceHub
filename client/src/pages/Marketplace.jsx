@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   Search, 
   Info, 
@@ -10,11 +10,14 @@ import {
   X, 
   RotateCcw, 
   Star, 
-  ArrowUpDown,
-  Filter,
-  Check
+  ArrowUpDown, 
+  Filter, 
+  Check,
+  Heart
 } from 'lucide-react';
 import { getCategories, getResources } from '../services/resourceService';
+import wishlistService from '../services/wishlistService';
+import { useAuth } from '../context/AuthContext';
 
 export default function Marketplace() {
   const [resources, setResources] = useState([]);
@@ -63,6 +66,66 @@ export default function Marketplace() {
     }, 400);
     return () => clearTimeout(handler);
   }, [minPrice, maxPrice, locationTerm]);
+
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [wishlistIds, setWishlistIds] = useState(new Set());
+
+  // Fetch Wishlist IDs when user is authenticated
+  useEffect(() => {
+    const loadWishlistIds = async () => {
+      if (!user) return;
+      try {
+        const res = await wishlistService.getWishlistIds();
+        if (res && res.success) {
+          setWishlistIds(new Set(res.ids || []));
+        }
+      } catch (e) {
+        // Ignore background fetch errors
+      }
+    };
+    loadWishlistIds();
+  }, [user]);
+
+  const handleToggleWishlist = async (resourceId, e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
+    // Optimistic UI update
+    setWishlistIds(prev => {
+      const next = new Set(prev);
+      if (next.has(resourceId)) next.delete(resourceId);
+      else next.add(resourceId);
+      return next;
+    });
+
+    try {
+      const res = await wishlistService.toggleWishlist(resourceId);
+      if (res && res.success) {
+        setWishlistIds(prev => {
+          const next = new Set(prev);
+          if (res.inWishlist) next.add(resourceId);
+          else next.delete(resourceId);
+          return next;
+        });
+      }
+    } catch (err) {
+      console.error('Failed to toggle wishlist:', err);
+      // Rollback on error
+      setWishlistIds(prev => {
+        const next = new Set(prev);
+        if (next.has(resourceId)) next.delete(resourceId);
+        else next.add(resourceId);
+        return next;
+      });
+    }
+  };
 
   // Fetch Categories on Mount
   useEffect(() => {
@@ -539,6 +602,22 @@ export default function Marketplace() {
                       <span className="text-[10px] uppercase font-bold tracking-widest text-slate-500">No Image Provided</span>
                     </div>
                   )}
+
+                  {/* Wishlist Bookmark Button */}
+                  <button
+                    type="button"
+                    onClick={(e) => handleToggleWishlist(item.id, e)}
+                    className={`absolute top-3 left-3 p-1.5 rounded-full backdrop-blur-md transition-all shadow-md z-10 cursor-pointer ${
+                      wishlistIds.has(item.id)
+                        ? 'bg-rose-950/70 text-rose-400 hover:bg-rose-900/80 ring-1 ring-rose-500/50'
+                        : 'bg-black/50 text-slate-300 hover:text-rose-400 hover:bg-black/70'
+                    }`}
+                    title={wishlistIds.has(item.id) ? 'Remove from Wishlist' : 'Save to Wishlist'}
+                  >
+                    <Heart className={`h-4 w-4 transition-transform active:scale-125 ${
+                      wishlistIds.has(item.id) ? 'fill-rose-500 text-rose-500' : ''
+                    }`} />
+                  </button>
 
                   {/* Availability Badge */}
                   <span className={`absolute top-3 right-3 text-[9px] uppercase font-extrabold px-2.5 py-0.5 rounded shadow-sm ${getStatusBadgeStyle(item.status)}`}>

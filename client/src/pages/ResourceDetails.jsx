@@ -14,11 +14,13 @@ import {
   Trash2,
   AlertTriangle,
   PlusCircle,
-  X
+  X,
+  Heart
 } from 'lucide-react';
 import { getResourceById, archiveResource, getResources } from '../services/resourceService';
 import { createRequest } from '../services/exchangeService';
 import chatService from '../services/chatService';
+import wishlistService from '../services/wishlistService';
 import { useAuth } from '../context/AuthContext';
 
 export default function ResourceDetails() {
@@ -56,6 +58,37 @@ export default function ResourceDetails() {
       alert(err.response?.data?.message || 'Could not open chat.');
     } finally {
       setInitiatingChat(false);
+    }
+  };
+
+  const [inWishlist, setInWishlist] = useState(false);
+  const [togglingWishlist, setTogglingWishlist] = useState(false);
+
+  useEffect(() => {
+    if (user && id) {
+      wishlistService.checkWishlistStatus(id).then(res => {
+        if (res && res.success) {
+          setInWishlist(res.inWishlist);
+        }
+      }).catch(() => {});
+    }
+  }, [user, id]);
+
+  const handleToggleWishlist = async () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    try {
+      setTogglingWishlist(true);
+      const res = await wishlistService.toggleWishlist(id);
+      if (res && res.success) {
+        setInWishlist(res.inWishlist);
+      }
+    } catch (err) {
+      console.error('Failed to toggle wishlist:', err);
+    } finally {
+      setTogglingWishlist(false);
     }
   };
 
@@ -343,6 +376,20 @@ export default function ResourceDetails() {
                   >
                     <MessageSquare className="h-4 w-4" />
                     <span>{initiatingChat ? 'Opening Chat...' : `Chat with ${resource.owner.name.split(' ')[0]}`}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleToggleWishlist}
+                    disabled={togglingWishlist}
+                    className={`w-full flex items-center justify-center space-x-2 py-3 rounded-xl border transition-all shadow-sm font-semibold text-sm cursor-pointer ${
+                      inWishlist
+                        ? 'bg-rose-500/15 border-rose-500/30 text-rose-300 hover:bg-rose-500/25'
+                        : 'bg-slate-800/80 border-[#242f4c] text-slate-300 hover:text-white hover:bg-slate-800'
+                    }`}
+                  >
+                    <Heart className={`h-4 w-4 ${inWishlist ? 'fill-rose-500 text-rose-500' : ''}`} />
+                    <span>{inWishlist ? 'Saved in Wishlist' : 'Save to Wishlist'}</span>
                   </button>
                 </div>
               )}

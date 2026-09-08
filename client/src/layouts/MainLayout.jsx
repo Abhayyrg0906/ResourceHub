@@ -12,7 +12,8 @@ import {
   X, 
   LogOut,
   GraduationCap,
-  MessageSquare
+  MessageSquare,
+  Heart
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getUnreadCount } from '../services/notificationService';
@@ -52,6 +53,7 @@ export default function MainLayout() {
   const baseNavItems = [
     { name: 'Marketplace', path: '/resources', icon: BookOpen },
     { name: 'Dashboard', path: '/dashboard', icon: User },
+    { name: 'Wishlist', path: '/wishlist', icon: Heart },
     { name: 'Messages', path: '/chat', icon: MessageSquare },
     { name: 'Add Resource', path: '/resources/create', icon: PlusCircle },
     { name: 'My Listings', path: '/my-listings', icon: FolderHeart },
@@ -100,6 +102,14 @@ export default function MainLayout() {
             {/* Right Buttons */}
             <div className="hidden md:flex items-center space-x-4">
               <Link 
+                to="/wishlist" 
+                title="My Wishlist"
+                className="relative p-1.5 rounded-full text-slate-300 hover:bg-[#1f2942] hover:text-rose-400 transition-colors duration-300 flex items-center"
+              >
+                <Heart className="h-5 w-5" />
+              </Link>
+
+              <Link 
                 to="/chat" 
                 title="Messages"
                 className="relative p-1.5 rounded-full text-slate-300 hover:bg-[#1f2942] hover:text-white transition-colors duration-300 flex items-center"
@@ -140,6 +150,14 @@ export default function MainLayout() {
 
             {/* Mobile menu button */}
             <div className="md:hidden flex items-center space-x-3">
+              <Link 
+                to="/wishlist" 
+                className="relative p-1.5 text-slate-300 hover:text-rose-400 flex items-center"
+                title="Wishlist"
+              >
+                <Heart className="h-5 w-5" />
+              </Link>
+
               <Link 
                 to="/chat" 
                 className="relative p-1.5 text-slate-300 flex items-center"
