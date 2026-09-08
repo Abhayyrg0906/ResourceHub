@@ -323,8 +323,8 @@ const getQrStatus = async (req, res) => {
       verified_by_id: qr.verified_by_id
     };
 
-    // Only expose the active verification token to the resource owner who generates it
-    if (userId === transaction.owner_id) {
+    // Only expose active verification token to owner when status is GENERATED
+    if (userId === transaction.owner_id && qr.status === 'GENERATED') {
       payload.verification_token = qr.verification_token;
     }
 
@@ -342,8 +342,166 @@ const getQrStatus = async (req, res) => {
   }
 };
 
+/**
+ * 4. Get QR Handover History for Authenticated User
+ * Returns all QR verifications for transactions where the caller was owner or requester.
+ * Strictly omits verification_token.
+ */
+const getQrHistory = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Auto-expire any stale GENERATED records
+    await db.query(
+      'UPDATE qr_verifications SET status = "EXPIRED" WHERE status = "GENERATED" AND expires_at <= NOW()'
+    );
+
+    const [rows] = await db.query(
+      `SELECT 
+        qv.id,
+        qv.transaction_id,
+        qv.status,
+        qv.generated_at,
+        qv.expires_at,
+        qv.verified_at,
+        qv.verified_by_id,
+        er.status AS transaction_status,
+        r.exchange_type AS resource_exchange_type,
+        er.price_agreed,
+        r.id AS resource_id,
+        r.title AS resource_title,
+        r.meetup_location,
+        u_owner.id AS owner_id,
+        u_owner.name AS owner_name,
+        u_req.id AS requester_id,
+        u_req.name AS requester_name,
+        u_ver.name AS verified_by_name,
+        CASE 
+          WHEN r.owner_id = ? THEN 'OWNER'
+          ELSE 'REQUESTER'
+        END AS user_role,
+        CASE 
+          WHEN r.owner_id = ? THEN u_req.name
+          ELSE u_owner.name
+        END AS partner_name
+      FROM qr_verifications qv
+      JOIN exchange_requests er ON qv.transaction_id = er.id
+      JOIN resources r ON er.resource_id = r.id
+      JOIN users u_owner ON r.owner_id = u_owner.id
+      JOIN users u_req ON er.requester_id = u_req.id
+      LEFT JOIN users u_ver ON qv.verified_by_id = u_ver.id
+      WHERE (r.owner_id = ? OR er.requester_id = ?)
+      ORDER BY qv.generated_at DESC`,
+      [userId, userId, userId, userId]
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: rows
+    });
+  } catch (error) {
+    console.error('Error fetching QR history:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error while fetching QR history.'
+    });
+  }
+};
+
+/**
+ * 5. Get QR History for a Specific Transaction
+ */
+const getTransactionQrHistory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    // First check transaction existence and participant authorization
+    const [txRows] = await db.query(
+      `SELECT er.id, er.requester_id, r.owner_id 
+       FROM exchange_requests er
+       JOIN resources r ON er.resource_id = r.id
+       WHERE er.id = ?`,
+      [id]
+    );
+
+    if (txRows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Exchange request not found.'
+      });
+    }
+
+    const transaction = txRows[0];
+    if (userId !== transaction.owner_id && userId !== transaction.requester_id) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not authorized to view QR history for this transaction.'
+      });
+    }
+
+    const [rows] = await db.query(
+      `SELECT 
+        qv.id,
+        qv.transaction_id,
+        qv.status,
+        qv.generated_at,
+        qv.expires_at,
+        qv.verified_at,
+        qv.verified_by_id,
+        er.status AS transaction_status,
+        r.exchange_type AS resource_exchange_type,
+        er.price_agreed,
+        r.id AS resource_id,
+        r.title AS resource_title,
+        r.meetup_location,
+        u_owner.id AS owner_id,
+        u_owner.name AS owner_name,
+        u_req.id AS requester_id,
+        u_req.name AS requester_name,
+        u_ver.name AS verified_by_name,
+        CASE 
+          WHEN r.owner_id = ? THEN 'OWNER'
+          ELSE 'REQUESTER'
+        END AS user_role,
+        CASE 
+          WHEN r.owner_id = ? THEN u_req.name
+          ELSE u_owner.name
+        END AS partner_name
+      FROM qr_verifications qv
+      JOIN exchange_requests er ON qv.transaction_id = er.id
+      JOIN resources r ON er.resource_id = r.id
+      JOIN users u_owner ON r.owner_id = u_owner.id
+      JOIN users u_req ON er.requester_id = u_req.id
+      LEFT JOIN users u_ver ON qv.verified_by_id = u_ver.id
+      WHERE qv.transaction_id = ?`,
+      [userId, userId, id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No QR verification history found for this exchange.'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: rows[0]
+    });
+  } catch (error) {
+    console.error('Error fetching transaction QR history:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error while fetching transaction QR history.'
+    });
+  }
+};
+
 module.exports = {
   generateQr,
   verifyQr,
-  getQrStatus
+  getQrStatus,
+  getQrHistory,
+  getTransactionQrHistory
 };

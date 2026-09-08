@@ -69,4 +69,12 @@ export const getTransactionReviews = async (transactionId) => {
   const response = await api.get(`/reviews/transaction/${transactionId}`);
   return response.data;
 };
+export const getQrHistory = async () => {
+  const response = await api.get('/exchange-requests/qr/history');
+  return response.data;
+};
 
+export const getTransactionQrHistory = async (transactionId) => {
+  const response = await api.get(`/exchange-requests/${transactionId}/qr/history`);
+  return response.data;
+};

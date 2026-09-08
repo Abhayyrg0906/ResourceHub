@@ -14,7 +14,8 @@ import {
   X, 
   Camera, 
   Star,
-  MessageSquare 
+  MessageSquare,
+  History 
 } from 'lucide-react';
 import chatService from '../services/chatService';
 import { 
@@ -31,12 +32,13 @@ import {
 } from '../services/exchangeService';
 import { useAuth } from '../context/AuthContext';
 import { QRCodeCanvas } from 'qrcode.react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import HandoverQrModal from '../components/HandoverQrModal';
+import QrHistoryModal from '../components/QrHistoryModal';
 
 // ----------------------------------------------------
-// Unified Handover Verification Section (M7 QR Handover)
+// Unified Handover Verification Section (M16 Enhanced QR Handover)
 // ----------------------------------------------------
-function HandoverVerificationSection({ req, currentUser, onVerified, onScanTrigger, verifiedList }) {
+function HandoverVerificationSection({ req, currentUser, onVerified, onOpenHandoverModal, verifiedList }) {
   const isOwner = currentUser && Number(currentUser.id) === Number(req.owner_id);
   const isRequester = currentUser && Number(currentUser.id) === Number(req.requester_id);
   const isAccepted = req.status.toUpperCase() === 'ACCEPTED';
@@ -61,23 +63,6 @@ function HandoverVerificationSection({ req, currentUser, onVerified, onScanTrigg
       }
     } catch (err) {
       console.error('Failed to get QR status:', err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGenerate = async () => {
-    setLoading(true);
-    try {
-      const res = await generateQr(req.id);
-      if (res.success) {
-        await fetchStatus();
-        // Start polling status check every 3s
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = setInterval(fetchStatus, 3000);
-      }
-    } catch (err) {
-      alert(err.response?.data?.message || 'Failed to generate verification QR.');
     } finally {
       setLoading(false);
     }
@@ -141,41 +126,38 @@ function HandoverVerificationSection({ req, currentUser, onVerified, onScanTrigg
     }
 
     return (
-      <div className="border-t border-[#242f4c]/40 pt-4 mt-4 space-y-4">
-        <h4 className="text-xs uppercase font-extrabold tracking-wider text-indigo-400">Exchange Handover</h4>
-        
-        {!isQrGenerated || isQrExpired ? (
-          <div className="bg-slate-900/60 border border-[#242f4c] rounded-2xl p-5 text-center space-y-3 max-w-xs mx-auto">
-            <p className="text-xs text-slate-400 leading-relaxed">
-              {isQrExpired ? 'QR expired.' : 'You are the resource owner.'}
+      <div className="border-t border-[#242f4c]/40 pt-4 mt-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <h4 className="text-xs uppercase font-extrabold tracking-wider text-indigo-400">Exchange Handover</h4>
+          <span className="text-[10px] font-semibold text-slate-400">
+            Status: {isQrGenerated && !isQrExpired ? `Active (${countdown || '10m'})` : isQrExpired ? 'QR Expired' : 'Not Generated'}
+          </span>
+        </div>
+
+        <div className="bg-slate-900/60 border border-[#242f4c] rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="space-y-1 text-center sm:text-left">
+            <p className="text-xs font-bold text-slate-200">
+              {isQrGenerated && !isQrExpired ? 'Handover QR Code Ready' : isQrExpired ? 'Handover QR Expired' : 'In-Person Handover Verification'}
             </p>
+            <p className="text-[11px] text-slate-400">
+              {isQrGenerated && !isQrExpired 
+                ? `Present code to ${req.requester_name} (expires in ${countdown || '10m'}).` 
+                : isQrExpired 
+                ? 'The previous QR code has expired. Regenerate a new code for the requester.' 
+                : 'Generate a secure, single-use 10-minute QR code for the requester to scan.'}
+            </p>
+          </div>
+
+          <div className="flex items-center space-x-2 flex-shrink-0">
             <button
-              onClick={handleGenerate}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer shadow-md shadow-indigo-600/10"
+              onClick={() => onOpenHandoverModal(req)}
+              className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-md shadow-indigo-600/10 flex items-center space-x-1.5"
             >
-              {isQrExpired ? 'Generate New QR' : 'Generate Handover QR'}
+              <QrCode className="h-4 w-4" />
+              <span>{isQrGenerated && !isQrExpired ? 'View / Present QR' : isQrExpired ? 'Regenerate QR' : 'Generate Handover QR'}</span>
             </button>
-            <div className="text-[10px] text-slate-500">
-              Status: {isQrExpired ? 'QR expired' : 'Waiting for requester'}
-            </div>
           </div>
-        ) : (
-          <div className="bg-[#0b0e17] border border-[#242f4c] rounded-2xl p-5 flex flex-col items-center space-y-4 text-center max-w-xs mx-auto shadow-lg">
-            <h5 className="text-[11px] font-bold text-slate-300">Handover QR Code</h5>
-            <div className="bg-white p-3 rounded-2xl">
-              <QRCodeCanvas 
-                value={`RESOURCEHUB_VERIFY:${qrData.verification_token}`} 
-                size={160} 
-                bgColor="#ffffff" 
-                fgColor="#000000" 
-              />
-            </div>
-            <div className="space-y-1">
-              <span className="text-xs text-slate-400 font-semibold block">Expires in: <span className="text-rose-400 font-bold">{countdown}</span></span>
-              <span className="text-[10px] text-slate-500">Status: Waiting for requester</span>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
     );
   }
@@ -197,42 +179,40 @@ function HandoverVerificationSection({ req, currentUser, onVerified, onScanTrigg
     if (isQrExpired) {
       return (
         <div className="border-t border-[#242f4c]/40 pt-4 mt-4 space-y-3">
-          <h4 className="text-xs uppercase font-extrabold tracking-wider text-indigo-400">Exchange Handover</h4>
-          <div className="bg-slate-900/60 border border-[#242f4c] rounded-2xl p-4 space-y-2 text-center max-w-xs mx-auto">
-            <div className="flex items-center justify-center space-x-2 text-rose-400 text-xs font-bold uppercase">
-              <AlertTriangle className="h-4 w-4 text-rose-400" />
-              <span className="text-rose-400">QR Expired</span>
+          <div className="bg-slate-900/60 border border-rose-500/30 rounded-2xl p-4 flex items-center justify-between gap-3 text-rose-400">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="h-4 w-4 text-rose-400 flex-shrink-0" />
+              <span className="text-xs font-semibold">The handover QR has expired. Please ask the owner to regenerate it.</span>
             </div>
-            <p className="text-[11px] text-slate-400 leading-relaxed">
-              QR expired. Ask the resource owner to generate a new QR.
-            </p>
           </div>
         </div>
       );
     }
 
     return (
-      <div className="border-t border-[#242f4c]/40 pt-4 mt-4 space-y-4">
-        <h4 className="text-xs uppercase font-extrabold tracking-wider text-indigo-400">Exchange Handover</h4>
-        
-        <div className="bg-slate-900/60 border border-[#242f4c] rounded-2xl p-5 text-center space-y-3 max-w-xs mx-auto shadow-md">
-          <p className="text-xs text-slate-400 leading-relaxed">
-            Meet the resource owner and scan their QR code.
-          </p>
-          
-          <div className="space-y-2">
-            <button
-              onClick={onScanTrigger}
-              disabled={!isQrGenerated}
-              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-[#1b233a] disabled:text-slate-500 text-white font-bold py-2.5 rounded-xl text-xs uppercase tracking-wide cursor-pointer disabled:cursor-not-allowed flex items-center justify-center space-x-1 shadow-md shadow-indigo-600/10"
-            >
-              <QrCode className="h-3.5 w-3.5" />
-              <span>Scan QR Handover</span>
-            </button>
-            <div className="text-[10px] text-slate-500 font-semibold">
-              Status: {isQrGenerated ? 'Waiting for QR verification' : 'Waiting for owner to generate QR'}
-            </div>
+      <div className="border-t border-[#242f4c]/40 pt-4 mt-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <h4 className="text-xs uppercase font-extrabold tracking-wider text-indigo-400">Exchange Handover</h4>
+          <span className="text-[10px] font-semibold text-slate-400">
+            Status: {isQrGenerated ? 'Ready to Scan' : 'Waiting for owner to generate QR'}
+          </span>
+        </div>
+
+        <div className="bg-slate-900/60 border border-[#242f4c] rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="space-y-1 text-center sm:text-left">
+            <p className="text-xs font-bold text-slate-200">Verify Physical Item Handover</p>
+            <p className="text-[11px] text-slate-400">
+              Meet with {req.owner_name}, inspect the resource, and scan their handover QR code.
+            </p>
           </div>
+
+          <button
+            onClick={() => onOpenHandoverModal(req)}
+            className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wide cursor-pointer flex items-center space-x-1.5 shadow-md shadow-indigo-600/10 flex-shrink-0"
+          >
+            <Camera className="h-4 w-4" />
+            <span>Scan Handover QR</span>
+          </button>
         </div>
       </div>
     );
@@ -240,6 +220,7 @@ function HandoverVerificationSection({ req, currentUser, onVerified, onScanTrigg
 
   return null;
 }
+
 
 // ----------------------------------------------------
 // Completed Exchange Review Display Section (M8.3)
@@ -493,162 +474,6 @@ function ReviewModal({ transaction, currentUser, onClose, onSuccess }) {
 }
 
 // ----------------------------------------------------
-// Requester QR Scanning Modal Fallback (M7)
-// ----------------------------------------------------
-function RequesterScanModal({ reqId, onClose, onVerified }) {
-  const [tokenInput, setTokenInput] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [scannerActive, setScannerActive] = useState(false);
-  const scannerRef = useRef(null);
-
-  const startCameraScanner = () => {
-    setScannerActive(true);
-    setTimeout(() => {
-      try {
-        scannerRef.current = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: 220 });
-        scannerRef.current.render(async (decodedText) => {
-          let token = decodedText;
-          if (decodedText.startsWith('RESOURCEHUB_VERIFY:')) {
-            token = decodedText.split('RESOURCEHUB_VERIFY:')[1];
-          }
-          await handleVerification(token);
-        }, (err) => {
-          // Silent scan failure loop
-        });
-      } catch (err) {
-        console.error('Camera scanner init failed:', err);
-        setError('Camera access failed. Please use manual token input.');
-        setScannerActive(false);
-      }
-    }, 200);
-  };
-
-  const stopCameraScanner = () => {
-    if (scannerRef.current) {
-      scannerRef.current.clear().catch(e => console.error(e));
-      scannerRef.current = null;
-    }
-    setScannerActive(false);
-  };
-
-  const handleVerification = async (token) => {
-    setLoading(true);
-    setError('');
-    try {
-      const res = await verifyQr(reqId, token);
-      if (res.success) {
-        setSuccess(true);
-        stopCameraScanner();
-        setTimeout(() => {
-          onVerified();
-          onClose();
-        }, 1500);
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Handover verification failed.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    return () => {
-      if (scannerRef.current) {
-        scannerRef.current.clear().catch(e => console.error(e));
-      }
-    };
-  }, []);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0d111c]/80 backdrop-blur-sm p-4 animate-fadeIn">
-      <div className="bg-[#161d30] border border-[#242f4c] rounded-3xl p-6 md:p-8 max-w-md w-full relative shadow-2xl space-y-6">
-        
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors cursor-pointer"
-        >
-          <X className="h-5 w-5" />
-        </button>
-
-        <div className="space-y-1">
-          <h2 className="text-xl font-extrabold text-white tracking-tight">Scan Handover QR</h2>
-          <p className="text-xs text-slate-400">Scan the QR code presented by the owner to verify physical exchange.</p>
-        </div>
-
-        {success ? (
-          <div className="text-center py-8 space-y-3">
-            <CheckCircle2 className="h-12 w-12 text-emerald-400 mx-auto animate-bounce" />
-            <h3 className="text-lg font-bold text-slate-200">Exchange Verified!</h3>
-            <p className="text-xs text-slate-400">Handover transaction confirmed successfully.</p>
-          </div>
-        ) : (
-          <div className="space-y-5">
-            {error && (
-              <div className="flex items-center space-x-2 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-xl px-4 py-2.5 text-xs">
-                <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            {/* Camera scanner view */}
-            {scannerActive ? (
-              <div className="space-y-4">
-                <div id="qr-reader" className="overflow-hidden rounded-2xl border border-slate-700 bg-black"></div>
-                <button
-                  onClick={stopCameraScanner}
-                  className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2 rounded-xl text-xs cursor-pointer"
-                >
-                  Cancel Camera
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={startCameraScanner}
-                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl flex items-center justify-center space-x-2 text-xs uppercase cursor-pointer"
-              >
-                <Camera className="h-4 w-4" />
-                <span>Scan with Camera</span>
-              </button>
-            )}
-
-            <div className="relative flex py-2 items-center">
-              <div className="flex-grow border-t border-[#242f4c]"></div>
-              <span className="flex-shrink mx-4 text-slate-500 text-xs font-bold">OR USE MANUAL CODE</span>
-              <div className="flex-grow border-t border-[#242f4c]"></div>
-            </div>
-
-            {/* Manual token input fallback */}
-            <div className="space-y-2">
-              <label className="block text-xs font-semibold text-slate-300">Enter Handover Verification Token</label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Paste secure token here..."
-                  value={tokenInput}
-                  onChange={(e) => setTokenInput(e.target.value)}
-                  className="flex-grow px-4 py-2.5 bg-[#0d111c]/90 border border-slate-700/60 focus:border-indigo-500/80 rounded-xl text-slate-100 placeholder-slate-500 outline-none text-xs"
-                />
-                <button
-                  onClick={() => handleVerification(tokenInput)}
-                  disabled={loading || !tokenInput}
-                  className="bg-slate-800 hover:bg-slate-750 text-white text-xs font-bold px-4 py-2.5 rounded-xl border border-slate-750 disabled:opacity-50 cursor-pointer"
-                >
-                  Verify
-                </button>
-              </div>
-            </div>
-
-          </div>
-        )}
-
-      </div>
-    </div>
-  );
-}
-
-// ----------------------------------------------------
 // Main Exchange Requests Dashboard Component
 // ----------------------------------------------------
 export default function MyRequests() {
@@ -676,8 +501,11 @@ export default function MyRequests() {
     }
   };
   
-  // Scanning state
-  const [scanningReqId, setScanningReqId] = useState(null);
+  // Handover QR Modal State (M16)
+  const [activeHandoverTx, setActiveHandoverTx] = useState(null);
+
+  // Handover Audit History Modal State (M16)
+  const [showQrHistory, setShowQrHistory] = useState(false);
   
   // Review modal state
   const [reviewingTransaction, setReviewingTransaction] = useState(null);
@@ -855,9 +683,18 @@ export default function MyRequests() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-extrabold text-white tracking-tight">Exchange Requests</h1>
-        <p className="text-sm text-slate-400 mt-1">Review requests sent to you or follow up on listings you requested from others.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold text-white tracking-tight">Exchange Requests</h1>
+          <p className="text-sm text-slate-400 mt-1">Review requests sent to you or follow up on listings you requested from others.</p>
+        </div>
+        <button
+          onClick={() => setShowQrHistory(true)}
+          className="inline-flex items-center space-x-2 px-4 py-2.5 bg-[#161d30] hover:bg-[#1e2742] text-indigo-400 hover:text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer self-start sm:self-auto"
+        >
+          <History className="h-4 w-4" />
+          <span>QR Handover History</span>
+        </button>
       </div>
 
       {/* Tabs */}
@@ -974,7 +811,7 @@ export default function MyRequests() {
                         req={req} 
                         currentUser={user} 
                         onVerified={(reqId) => setVerifiedList(prev => ({ ...prev, [reqId]: true }))} 
-                        onScanTrigger={() => setScanningReqId(req.id)}
+                        onOpenHandoverModal={(reqToVerify) => setActiveHandoverTx(reqToVerify)}
                         verifiedList={verifiedList}
                       />
                     )}
@@ -1071,7 +908,7 @@ export default function MyRequests() {
                         req={req} 
                         currentUser={user} 
                         onVerified={(reqId) => setVerifiedList(prev => ({ ...prev, [reqId]: true }))} 
-                        onScanTrigger={() => setScanningReqId(req.id)}
+                        onOpenHandoverModal={(reqToVerify) => setActiveHandoverTx(reqToVerify)}
                         verifiedList={verifiedList}
                       />
                     )}
@@ -1096,15 +933,23 @@ export default function MyRequests() {
         )}
       </div>
 
-      {/* QR scanner modal for requester scan action */}
-      {scanningReqId && (
-        <RequesterScanModal 
-          reqId={scanningReqId} 
-          onClose={() => setScanningReqId(null)}
-          onVerified={async () => {
-            setVerifiedList(prev => ({ ...prev, [scanningReqId]: true }));
+      {/* Enhanced Handover QR Modal for Owner & Requester (M16) */}
+      {activeHandoverTx && (
+        <HandoverQrModal 
+          transaction={activeHandoverTx} 
+          currentUser={user}
+          onClose={() => setActiveHandoverTx(null)}
+          onVerified={async (txId) => {
+            setVerifiedList(prev => ({ ...prev, [txId]: true }));
             await fetchRequests();
           }}
+        />
+      )}
+
+      {/* Handover Audit History Modal (M16) */}
+      {showQrHistory && (
+        <QrHistoryModal 
+          onClose={() => setShowQrHistory(false)}
         />
       )}
 
@@ -1121,3 +966,4 @@ export default function MyRequests() {
     </div>
   );
 }
+
