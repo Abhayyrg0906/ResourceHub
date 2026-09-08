@@ -13,6 +13,7 @@ const notificationsRouter = require('./routes/notifications');
 const adminRouter = require('./routes/admin');
 const chatRouter = require('./routes/chat');
 const wishlistRouter = require('./routes/wishlist');
+const usersRouter = require('./routes/users');
 const { initSocket } = require('./socket');
 const db = require('./config/database');
 
@@ -36,6 +37,8 @@ app.use('/api/notifications', notificationsRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/chat', chatRouter);
 app.use('/api/wishlist', wishlistRouter);
+app.use('/api/users', usersRouter);
+app.use('/api/profile', usersRouter);
 
 // Fallback Route for Undefined Paths (404 Handler)
 app.use((req, res, next) => {

@@ -92,6 +92,7 @@ export default function App() {
             <Route path="/exchange-requests" element={<MyRequests />} />
             <Route path="/history" element={<ExchangeHistory />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/profile/:userId" element={<Profile />} />
             <Route path="/wishlist" element={<Wishlist />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/chat" element={<Chat />} />

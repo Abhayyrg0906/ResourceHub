@@ -304,12 +304,18 @@ export default function ResourceDetails() {
           <div className="bg-[#161d30]/60 border border-[#242f4c] rounded-3xl p-6 shadow-lg">
             <h3 className="text-xs uppercase font-bold tracking-widest text-slate-500 mb-4">Listed By</h3>
             
-            <div className="flex items-center space-x-3 mb-6">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center font-bold text-white shadow-md text-lg">
+            <Link 
+              to={`/profile/${resource.owner.id}`}
+              className="flex items-center space-x-3 mb-6 p-2 -m-2 rounded-2xl hover:bg-slate-800/40 transition-colors group"
+              title={`View ${resource.owner.name}'s profile`}
+            >
+              <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center font-bold text-white shadow-md text-lg group-hover:scale-105 transition-transform">
                 {resource.owner.name.charAt(0).toUpperCase()}
               </div>
-              <div className="flex-1">
-                <h4 className="font-bold text-slate-200">{resource.owner.name}</h4>
+              <div className="flex-1 min-w-0">
+                <h4 className="font-bold text-slate-200 group-hover:text-indigo-400 transition-colors truncate">
+                  {resource.owner.name}
+                </h4>
                 <div className="flex flex-wrap items-center gap-2 text-xs mt-0.5">
                   <div className="flex items-center space-x-1 text-emerald-400 font-semibold">
                     <ShieldCheck className="h-3.5 w-3.5" />
@@ -322,7 +328,7 @@ export default function ResourceDetails() {
                   )}
                 </div>
               </div>
-            </div>
+            </Link>
 
             <div className="border-t border-[#242f4c] pt-4">
               <span className="text-[10px] uppercase font-bold tracking-widest text-slate-500 block mb-1">Exchange Terms</span>
