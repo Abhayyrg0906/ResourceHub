@@ -15,13 +15,15 @@ import {
   AlertTriangle,
   PlusCircle,
   X,
-  Heart
+  Heart,
+  Award
 } from 'lucide-react';
 import { getResourceById, archiveResource, getResources } from '../services/resourceService';
 import { createRequest } from '../services/exchangeService';
 import chatService from '../services/chatService';
 import wishlistService from '../services/wishlistService';
 import { useAuth } from '../context/AuthContext';
+import TrustBreakdownModal from '../components/TrustBreakdownModal';
 
 export default function ResourceDetails() {
   const { id } = useParams();
@@ -41,6 +43,7 @@ export default function ResourceDetails() {
   const [requestError, setRequestError] = useState('');
   const [requestSuccess, setRequestSuccess] = useState(false);
   const [initiatingChat, setInitiatingChat] = useState(false);
+  const [showOwnerTrustModal, setShowOwnerTrustModal] = useState(false);
 
   const handleStartChat = async () => {
     if (!user) {
@@ -321,11 +324,25 @@ export default function ResourceDetails() {
                     <ShieldCheck className="h-3.5 w-3.5" />
                     <span className="text-[11px]">Verified Student</span>
                   </div>
-                  {resource.owner.trust_score !== undefined && (
+                  {resource.owner.reputation_score !== undefined ? (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setShowOwnerTrustModal(true);
+                      }}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/15 hover:bg-indigo-500/30 border border-indigo-500/30 text-indigo-300 transition-colors cursor-pointer"
+                      title="Click to view owner's transparent reputation breakdown"
+                    >
+                      <Award className="h-3 w-3 text-indigo-400" />
+                      <span>Reputation: {Number(resource.owner.reputation_score).toFixed(0)}%</span>
+                    </button>
+                  ) : resource.owner.trust_score !== undefined ? (
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/10 border border-indigo-500/20 text-indigo-300">
                       Trust: {Number(resource.owner.trust_score).toFixed(1)}%
                     </span>
-                  )}
+                  ) : null}
                 </div>
               </div>
             </Link>
@@ -520,6 +537,15 @@ export default function ResourceDetails() {
 
           </div>
         </div>
+      )}
+
+      {/* Owner Trust Breakdown Modal */}
+      {showOwnerTrustModal && resource?.owner && (
+        <TrustBreakdownModal
+          userId={resource.owner.id}
+          userName={resource.owner.name}
+          onClose={() => setShowOwnerTrustModal(false)}
+        />
       )}
 
     </div>

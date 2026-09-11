@@ -61,13 +61,28 @@ export const getAdminReports = async (params = {}) => {
   return response.data;
 };
 
-/**
- * Update a report's status and resolution notes.
- * @param {number|string} reportId 
- * @param {Object} payload - { status, admin_resolution, archive_resource }
- * @returns {Promise<Object>} Updated report data
- */
 export const updateReportStatus = async (reportId, payload) => {
   const response = await api.patch(`/admin/reports/${reportId}/status`, payload);
   return response.data;
+};
+
+/**
+ * Fetch detailed reputation inspection breakdown for a user.
+ * @param {number|string} userId 
+ * @returns {Promise<Object>} Reputation breakdown data
+ */
+export const getAdminUserReputation = async (userId) => {
+  const response = await api.get(`/admin/users/${userId}/reputation`);
+  return response.data;
+};
+
+export default {
+  getAdminStats,
+  getAdminUsers,
+  updateUserStatus,
+  getAdminResources,
+  updateResourceStatus,
+  getAdminReports,
+  updateReportStatus,
+  getAdminUserReputation
 };

@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const { createNotification } = require('../services/notificationService');
+const reputationService = require('../services/reputationService');
 
 // Helper to check transition validity
 const isValidTransition = (currentStatus, targetStatus) => {
@@ -362,6 +363,9 @@ const cancelRequest = async (req, res) => {
       [id]
     );
 
+    // M17: Recalculate requester's reputation due to cancellation
+    await reputationService.updateUserReputation(request.requester_id);
+
     // M9.4: Notify resource owner of cancellation
     await createNotification(
       request.owner_id,
@@ -646,6 +650,10 @@ const completeRequest = async (req, res) => {
         [request.offered_resource_id]
       );
     }
+
+    // M17: Update reputation score for both participants transactionally
+    await reputationService.updateUserReputation(request.owner_id, conn);
+    await reputationService.updateUserReputation(request.requester_id, conn);
 
     await conn.commit();
 

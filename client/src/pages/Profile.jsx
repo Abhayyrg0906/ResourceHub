@@ -26,6 +26,7 @@ import {
 import { getMyProfile, updateMyProfile, getUserProfile } from '../services/userService';
 import chatService from '../services/chatService';
 import { useAuth } from '../context/AuthContext';
+import TrustBreakdownModal from '../components/TrustBreakdownModal';
 
 export default function Profile() {
   const { userId } = useParams();
@@ -37,6 +38,7 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'listings', 'reviews'
+  const [showTrustModal, setShowTrustModal] = useState(false);
 
   // Edit Modal State
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -263,6 +265,20 @@ export default function Profile() {
                   <ShieldCheck className="h-3.5 w-3.5" />
                   <span>Verified Student</span>
                 </span>
+                {profileData.reputation_breakdown?.tier && (
+                  <button
+                    type="button"
+                    onClick={() => setShowTrustModal(true)}
+                    className="flex items-center gap-1.5 text-xs bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-3 py-1 rounded-full font-semibold transition-colors cursor-pointer"
+                    title="View detailed reputation and trust breakdown"
+                  >
+                    <Award className="h-3.5 w-3.5 text-indigo-400" />
+                    <span>{profileData.reputation_breakdown.tier}</span>
+                    <span className="bg-indigo-500/20 px-1.5 py-0.5 rounded text-[10px] text-indigo-200">
+                      {profileData.reputation_score !== undefined ? profileData.reputation_score.toFixed(0) : trustScore}%
+                    </span>
+                  </button>
+                )}
               </div>
 
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 text-xs text-slate-300">
@@ -326,17 +342,28 @@ export default function Profile() {
         {/* Highlight Stats Strip */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8 pt-8 border-t border-[#242f4c]/80">
           
-          {/* Trust Score */}
-          <div className="bg-[#0f1523]/80 p-4 rounded-2xl border border-[#242f4c] text-center sm:text-left">
-            <span className="text-[10px] uppercase font-extrabold tracking-widest text-slate-400 block mb-1">
-              Trust Score
-            </span>
-            <div className="flex items-baseline justify-center sm:justify-start gap-1.5">
-              <span className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">
-                {trustScore}%
+          {/* Trust & Reputation Score */}
+          <div 
+            onClick={() => setShowTrustModal(true)}
+            className="bg-[#0f1523]/80 hover:bg-[#141c2e] transition-colors p-4 rounded-2xl border border-[#242f4c] text-center sm:text-left cursor-pointer group"
+            title="Click to view full reputation factors breakdown"
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] uppercase font-extrabold tracking-widest text-slate-400">
+                Reputation Score
+              </span>
+              <span className="text-[10px] text-cyan-400 group-hover:underline flex items-center gap-0.5">
+                Breakdown <ExternalLink className="w-2.5 h-2.5" />
               </span>
             </div>
-            <span className="text-[10px] text-slate-500 mt-1 block">Based on peer reviews</span>
+            <div className="flex items-baseline justify-center sm:justify-start gap-1.5">
+              <span className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">
+                {profileData.reputation_score !== undefined ? profileData.reputation_score.toFixed(0) : trustScore}%
+              </span>
+            </div>
+            <span className="text-[10px] text-slate-500 mt-1 block">
+              Multi-factor campus audit (M17)
+            </span>
           </div>
 
           {/* Completed Exchanges */}
@@ -840,6 +867,16 @@ export default function Profile() {
 
           </div>
         </div>
+      )}
+
+      {/* Trust & Reputation Breakdown Modal */}
+      {showTrustModal && profileData && (
+        <TrustBreakdownModal
+          userId={profileData.id}
+          userName={profileData.name}
+          initialData={profileData.reputation_breakdown}
+          onClose={() => setShowTrustModal(false)}
+        />
       )}
 
     </div>

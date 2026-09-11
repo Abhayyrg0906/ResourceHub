@@ -25,8 +25,17 @@ export const getUserProfile = async (userId) => {
   return response.data;
 };
 
+/**
+ * Fetch transparent reputation factor breakdown for a user.
+ */
+export const getUserReputation = async (userId) => {
+  const response = await api.get(`/users/${userId}/reputation`);
+  return response.data;
+};
+
 export default {
   getMyProfile,
   updateMyProfile,
-  getUserProfile
+  getUserProfile,
+  getUserReputation
 };

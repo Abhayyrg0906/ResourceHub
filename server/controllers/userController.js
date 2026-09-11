@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const reputationService = require('../services/reputationService');
 
 /**
  * Helper to retrieve aggregated statistics for a user.
@@ -62,6 +63,7 @@ const getMyProfile = async (req, res) => {
         phone_number, 
         bio, 
         trust_score, 
+        reputation_score,
         role, 
         status, 
         created_at, 
@@ -80,6 +82,7 @@ const getMyProfile = async (req, res) => {
 
     const user = rows[0];
     const stats = await getUserStats(userId);
+    const reputation_breakdown = await reputationService.getReputationBreakdown(userId);
 
     return res.status(200).json({
       success: true,
@@ -93,6 +96,8 @@ const getMyProfile = async (req, res) => {
         phone_number: user.phone_number,
         bio: user.bio,
         trust_score: parseFloat(user.trust_score || 100.00),
+        reputation_score: parseFloat(user.reputation_score !== undefined && user.reputation_score !== null ? user.reputation_score : (user.trust_score || 100.00)),
+        reputation_breakdown,
         role: user.role,
         status: user.status,
         created_at: user.created_at,
@@ -243,6 +248,7 @@ const updateMyProfile = async (req, res) => {
         phone_number, 
         bio, 
         trust_score, 
+        reputation_score,
         role, 
         status, 
         created_at, 
@@ -254,6 +260,7 @@ const updateMyProfile = async (req, res) => {
 
     const updatedUser = rows[0];
     const stats = await getUserStats(userId);
+    const reputation_breakdown = await reputationService.getReputationBreakdown(userId);
 
     return res.status(200).json({
       success: true,
@@ -268,6 +275,8 @@ const updateMyProfile = async (req, res) => {
         phone_number: updatedUser.phone_number,
         bio: updatedUser.bio,
         trust_score: parseFloat(updatedUser.trust_score || 100.00),
+        reputation_score: parseFloat(updatedUser.reputation_score !== undefined && updatedUser.reputation_score !== null ? updatedUser.reputation_score : (updatedUser.trust_score || 100.00)),
+        reputation_breakdown,
         role: updatedUser.role,
         status: updatedUser.status,
         created_at: updatedUser.created_at,
@@ -310,6 +319,7 @@ const getUserProfileById = async (req, res) => {
         year_of_study, 
         bio, 
         trust_score, 
+        reputation_score,
         role, 
         status,
         created_at
@@ -335,8 +345,9 @@ const getUserProfileById = async (req, res) => {
       });
     }
 
-    // Retrieve user stats
+    // Retrieve user stats and reputation breakdown
     const stats = await getUserStats(userId);
+    const reputation_breakdown = await reputationService.getReputationBreakdown(userId);
 
     // Retrieve active resources listed by this user
     const [activeListings] = await db.query(
@@ -387,6 +398,8 @@ const getUserProfileById = async (req, res) => {
         year_of_study: user.year_of_study,
         bio: user.bio,
         trust_score: parseFloat(user.trust_score || 100.00),
+        reputation_score: parseFloat(user.reputation_score !== undefined && user.reputation_score !== null ? user.reputation_score : (user.trust_score || 100.00)),
+        reputation_breakdown,
         created_at: user.created_at,
         stats,
         active_listings: activeListings.map(item => ({
@@ -406,8 +419,43 @@ const getUserProfileById = async (req, res) => {
   }
 };
 
+/**
+ * GET /api/users/:id/reputation
+ * Retrieves the transparent reputation breakdown for a user.
+ */
+const getUserReputation = async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id, 10);
+    if (isNaN(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid user ID parameter.'
+      });
+    }
+
+    const breakdown = await reputationService.getReputationBreakdown(userId);
+    return res.status(200).json({
+      success: true,
+      data: breakdown
+    });
+  } catch (error) {
+    console.error('[UserController] Error in getUserReputation:', error);
+    if (error.message === 'User not found') {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found.'
+      });
+    }
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error while fetching reputation breakdown.'
+    });
+  }
+};
+
 module.exports = {
   getMyProfile,
   updateMyProfile,
-  getUserProfileById
+  getUserProfileById,
+  getUserReputation
 };

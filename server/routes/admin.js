@@ -7,7 +7,8 @@ const {
   getResources,
   updateResourceStatus,
   getReports,
-  updateReportStatus
+  updateReportStatus,
+  getAdminUserReputation
 } = require('../controllers/adminController');
 const { protect } = require('../middleware/authMiddleware');
 const { requireAdmin } = require('../middleware/adminMiddleware');
@@ -19,8 +20,9 @@ router.use(requireAdmin);
 // Dashboard Statistics
 router.get('/stats', getStats);
 
-// User Management
+// User Management & Reputation Inspection
 router.get('/users', getUsers);
+router.get('/users/:id/reputation', getAdminUserReputation);
 router.patch('/users/:id/status', updateUserStatus);
 
 // Resource Moderation

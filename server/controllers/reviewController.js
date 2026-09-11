@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const { createNotification } = require('../services/notificationService');
+const reputationService = require('../services/reputationService');
 
 // 1. Create a Review (Atomic with Trust Score Calculation)
 const createReview = async (req, res) => {
@@ -150,10 +151,12 @@ const createReview = async (req, res) => {
     if (trustScore > 100.00) trustScore = 100.00;
     if (trustScore < 20.00) trustScore = 20.00;
 
-    // 3. Update reviewed user's trust_score
+    // 3. Update reviewed user's trust_score (legacy M8) & reputation_score (M17 enhanced)
+    const reputationData = await reputationService.updateUserReputation(reviewed_id, conn);
+
     await conn.query(
-      `UPDATE users SET trust_score = ? WHERE id = ?`,
-      [trustScore, reviewed_id]
+      `UPDATE users SET trust_score = ?, reputation_score = ? WHERE id = ?`,
+      [trustScore, reputationData.reputation_score, reviewed_id]
     );
 
     // 4. Fetch the newly created review info to return
@@ -197,7 +200,9 @@ const createReview = async (req, res) => {
         },
         reviewed_user: {
           id: reviewed_id,
-          trust_score: trustScore
+          trust_score: trustScore,
+          reputation_score: reputationData.reputation_score,
+          reputation_breakdown: reputationData
         }
       }
     });
@@ -232,7 +237,7 @@ const getUserReviews = async (req, res) => {
     const { userId } = req.params;
 
     // Check user exists
-    const [users] = await db.query('SELECT id, trust_score FROM users WHERE id = ?', [userId]);
+    const [users] = await db.query('SELECT id, trust_score, reputation_score FROM users WHERE id = ?', [userId]);
     if (users.length === 0) {
       return res.status(404).json({
         success: false,
@@ -280,6 +285,7 @@ const getUserReviews = async (req, res) => {
         average_rating: averageRating,
         review_count: parseInt(stats[0].review_count || 0, 10),
         trust_score: parseFloat(users[0].trust_score),
+        reputation_score: parseFloat(users[0].reputation_score !== undefined && users[0].reputation_score !== null ? users[0].reputation_score : users[0].trust_score),
         reviews: formatted
       }
     });

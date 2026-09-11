@@ -45,6 +45,7 @@ CREATE TABLE users (
     phone_number VARCHAR(20) NULL,
     bio TEXT NULL,
     trust_score DECIMAL(5,2) NOT NULL DEFAULT 100.00,
+    reputation_score DECIMAL(5,2) NOT NULL DEFAULT 100.00, -- M17: Enhanced multi-factor reputation score
     role ENUM('STUDENT', 'ADMIN') NOT NULL DEFAULT 'STUDENT',
     status ENUM('PENDING_VERIFICATION', 'ACTIVE', 'SUSPENDED') NOT NULL DEFAULT 'PENDING_VERIFICATION',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

@@ -31,6 +31,7 @@ import {
   getAdminReports, 
   updateReportStatus 
 } from '../services/adminService';
+import TrustBreakdownModal from '../components/TrustBreakdownModal';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -48,6 +49,7 @@ export default function AdminDashboard() {
   const [userSearch, setUserSearch] = useState('');
   const [userStatusFilter, setUserStatusFilter] = useState('');
   const [userActionLoading, setUserActionLoading] = useState(null);
+  const [selectedReputationUser, setSelectedReputationUser] = useState(null);
 
   // Resources State
   const [resources, setResources] = useState([]);
@@ -405,7 +407,7 @@ export default function AdminDashboard() {
                   <th className="p-4">User</th>
                   <th className="p-4">Department & Year</th>
                   <th className="p-4">Role</th>
-                  <th className="p-4">Trust Score</th>
+                  <th className="p-4">Reputation & Trust</th>
                   <th className="p-4">Status</th>
                   <th className="p-4 text-right">Actions</th>
                 </tr>
@@ -439,8 +441,23 @@ export default function AdminDashboard() {
                           </span>
                         </td>
                         <td className="p-4">
-                          <span className="font-bold text-indigo-300">{u.trust_score}</span>
-                          <span className="text-slate-500 text-[10px]"> / 100</span>
+                          <div className="flex items-center gap-2">
+                            <div>
+                              <span className="font-bold text-emerald-400">
+                                {u.reputation_score !== undefined ? Number(u.reputation_score).toFixed(0) : u.trust_score}
+                              </span>
+                              <span className="text-slate-500 text-[10px]"> / 100</span>
+                              <p className="text-[10px] text-slate-400">M8 Review: {u.trust_score}%</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedReputationUser(u)}
+                              className="p-1 rounded bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 transition-colors cursor-pointer"
+                              title="Audit multi-factor reputation breakdown"
+                            >
+                              <ShieldCheck className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         </td>
                         <td className="p-4">
                           <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${
@@ -454,6 +471,15 @@ export default function AdminDashboard() {
                           </span>
                         </td>
                         <td className="p-4 text-right">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedReputationUser(u)}
+                            className="px-2.5 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/40 text-xs font-semibold transition-all mr-2 inline-flex items-center gap-1 cursor-pointer"
+                            title="Audit user reputation factors"
+                          >
+                            <ShieldCheck className="h-3.5 w-3.5" />
+                            <span>Audit</span>
+                          </button>
                           {isSelf ? (
                             <span className="text-[10px] text-slate-500 italic">Self (Protected)</span>
                           ) : u.status === 'SUSPENDED' ? (
@@ -753,6 +779,16 @@ export default function AdminDashboard() {
             )}
           </div>
         </div>
+      )}
+
+      {/* Admin Reputation Inspection Modal */}
+      {selectedReputationUser && (
+        <TrustBreakdownModal
+          userId={selectedReputationUser.id}
+          userName={selectedReputationUser.name}
+          onClose={() => setSelectedReputationUser(null)}
+          isAdmin={true}
+        />
       )}
     </div>
   );

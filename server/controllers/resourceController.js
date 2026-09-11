@@ -401,7 +401,8 @@ const getResourceById = async (req, res) => {
         u.name AS owner_name,
         u.email AS owner_email,
         u.bio AS owner_bio,
-        u.trust_score AS owner_trust_score
+        u.trust_score AS owner_trust_score,
+        u.reputation_score AS owner_reputation_score
       FROM resources r
       JOIN categories c ON r.category_id = c.id
       JOIN users u ON r.owner_id = u.id
@@ -443,7 +444,8 @@ const getResourceById = async (req, res) => {
         name: resource.owner_name,
         email: resource.owner_email,
         bio: resource.owner_bio,
-        trust_score: parseFloat(resource.owner_trust_score || 100.00)
+        trust_score: parseFloat(resource.owner_trust_score || 100.00),
+        reputation_score: parseFloat(resource.owner_reputation_score !== undefined && resource.owner_reputation_score !== null ? resource.owner_reputation_score : (resource.owner_trust_score || 100.00))
       },
       images: images
     };

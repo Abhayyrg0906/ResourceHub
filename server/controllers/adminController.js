@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const { createNotification } = require('../services/notificationService');
+const reputationService = require('../services/reputationService');
 
 /**
  * 1. Platform Statistics
@@ -84,6 +85,7 @@ const getUsers = async (req, res) => {
          role,
          status,
          trust_score,
+         reputation_score,
          created_at,
          updated_at
        FROM users
@@ -93,9 +95,15 @@ const getUsers = async (req, res) => {
       [...params, limit, offset]
     );
 
+    const formattedUsers = users.map(u => ({
+      ...u,
+      trust_score: parseFloat(u.trust_score || 100.00),
+      reputation_score: parseFloat(u.reputation_score !== undefined && u.reputation_score !== null ? u.reputation_score : (u.trust_score || 100.00))
+    }));
+
     return res.status(200).json({
       success: true,
-      data: users,
+      data: formattedUsers,
       pagination: {
         page,
         limit,
@@ -160,6 +168,9 @@ const updateUserStatus = async (req, res) => {
       'UPDATE users SET status = ? WHERE id = ?',
       [normalizedStatus, id]
     );
+
+    // M17: Recalculate reputation on status change
+    await reputationService.updateUserReputation(id);
 
     // M10.6: Dispatch user notification
     const notificationTitle = normalizedStatus === 'SUSPENDED' 
@@ -502,6 +513,11 @@ const updateReportStatus = async (req, res) => {
       [normalizedStatus, admin_resolution || null, id]
     );
 
+    // M17: If report was filed against a user, recalculate user's reputation score
+    if (report.reported_entity_type === 'USER') {
+      await reputationService.updateUserReputation(report.reported_entity_id);
+    }
+
     // M10.6: Notify reporter that their report has been reviewed/updated
     await createNotification(
       report.reporter_id,
@@ -530,6 +546,41 @@ const updateReportStatus = async (req, res) => {
   }
 };
 
+/**
+ * 8. User Reputation Inspection
+ * GET /api/admin/users/:id/reputation
+ */
+const getAdminUserReputation = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = parseInt(id, 10);
+    if (isNaN(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid user ID parameter.'
+      });
+    }
+
+    const breakdown = await reputationService.getReputationBreakdown(userId);
+    return res.status(200).json({
+      success: true,
+      data: breakdown
+    });
+  } catch (error) {
+    console.error('Error fetching user reputation for admin:', error);
+    if (error.message === 'User not found') {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found.'
+      });
+    }
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error while fetching reputation details.'
+    });
+  }
+};
+
 module.exports = {
   getStats,
   getUsers,
@@ -537,5 +588,6 @@ module.exports = {
   getResources,
   updateResourceStatus,
   getReports,
-  updateReportStatus
+  updateReportStatus,
+  getAdminUserReputation
 };
