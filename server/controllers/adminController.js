@@ -2,6 +2,7 @@ const db = require('../config/database');
 const { createNotification } = require('../services/notificationService');
 const reputationService = require('../services/reputationService');
 const expiryService = require('../services/expiryService');
+const auditService = require('../services/auditService');
 
 const { getAdminAnalytics } = require('./analyticsController');
 
@@ -102,7 +103,7 @@ const getUsers = async (req, res) => {
 const updateUserStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, reason } = req.body;
     const currentAdminId = req.user.id;
 
     const allowedStatuses = ['PENDING_VERIFICATION', 'ACTIVE', 'SUSPENDED'];
@@ -138,11 +139,25 @@ const updateUserStatus = async (req, res) => {
       });
     }
 
+    const previousStatus = targetUser.status;
+
     // Update status
     await db.query(
       'UPDATE users SET status = ? WHERE id = ?',
       [normalizedStatus, id]
     );
+
+    // M23: Record administrative audit log
+    await auditService.logAdminAction({
+      adminId: currentAdminId,
+      actionType: 'USER_STATUS_CHANGE',
+      targetEntityType: 'USER',
+      targetEntityId: targetUser.id,
+      previousStatus: previousStatus,
+      newStatus: normalizedStatus,
+      reason: reason || null,
+      metadata: { target_email: targetUser.email, target_name: targetUser.name }
+    });
 
     // M17: Recalculate reputation on status change
     await reputationService.updateUserReputation(id);
@@ -152,7 +167,7 @@ const updateUserStatus = async (req, res) => {
       ? 'Account Suspended' 
       : 'Account Status Updated';
     const notificationMsg = normalizedStatus === 'SUSPENDED'
-      ? 'Your account has been suspended by administration. Please contact support.'
+      ? (reason ? `Your account has been suspended: ${reason}. Please contact support.` : 'Your account has been suspended by administration. Please contact support.')
       : `Your account status has been updated to ${normalizedStatus}.`;
 
     await createNotification(
@@ -236,7 +251,10 @@ const getResources = async (req, res) => {
          r.updated_at,
          r.owner_id,
          u.name AS owner_name,
-         u.email AS owner_email
+         u.email AS owner_email,
+         u.trust_score AS owner_trust_score,
+         u.reputation_score AS owner_reputation_score,
+         (SELECT COUNT(*) FROM reports WHERE reported_entity_type = 'RESOURCE' AND reported_entity_id = r.id) AS report_count
        FROM resources r
        JOIN users u ON r.owner_id = u.id
        LEFT JOIN categories c ON r.category_id = c.id
@@ -246,9 +264,16 @@ const getResources = async (req, res) => {
       [...params, limit, offset]
     );
 
+    const formattedResources = resources.map(r => ({
+      ...r,
+      owner_trust_score: parseFloat(r.owner_trust_score || 100.00),
+      owner_reputation_score: parseFloat(r.owner_reputation_score !== undefined && r.owner_reputation_score !== null ? r.owner_reputation_score : (r.owner_trust_score || 100.00)),
+      report_count: parseInt(r.report_count || 0, 10)
+    }));
+
     return res.status(200).json({
       success: true,
-      data: resources,
+      data: formattedResources,
       pagination: {
         page,
         limit,
@@ -272,7 +297,8 @@ const getResources = async (req, res) => {
 const updateResourceStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, reason } = req.body;
+    const adminId = req.user.id;
 
     const allowedStatuses = ['AVAILABLE', 'RESERVED', 'EXCHANGED', 'ARCHIVED'];
     if (!status || !allowedStatuses.includes(status.toUpperCase())) {
@@ -298,6 +324,7 @@ const updateResourceStatus = async (req, res) => {
     }
 
     const resource = resources[0];
+    const previousStatus = resource.status;
 
     // Transaction integrity check: Do NOT allow moderation action to alter an active transaction
     if (normalizedStatus === 'ARCHIVED') {
@@ -320,13 +347,34 @@ const updateResourceStatus = async (req, res) => {
       [normalizedStatus, id]
     );
 
-    // M10.6: Notify owner when resource is archived by moderation
+    // M23: Record administrative audit log
+    await auditService.logAdminAction({
+      adminId,
+      actionType: 'RESOURCE_STATUS_CHANGE',
+      targetEntityType: 'RESOURCE',
+      targetEntityId: resource.id,
+      previousStatus: previousStatus,
+      newStatus: normalizedStatus,
+      reason: reason || null,
+      metadata: { resource_title: resource.title, owner_id: resource.owner_id }
+    });
+
+    // M10.6: Notify owner when resource is archived or unarchived by moderation
     if (normalizedStatus === 'ARCHIVED') {
       await createNotification(
         resource.owner_id,
         'RESOURCE_ARCHIVED',
         'Resource Listing Archived',
-        `Your resource listing "${resource.title}" has been archived by administration.`,
+        reason ? `Your resource listing "${resource.title}" has been archived: ${reason}.` : `Your resource listing "${resource.title}" has been archived by administration.`,
+        resource.id,
+        'resources'
+      );
+    } else if (previousStatus === 'ARCHIVED' && normalizedStatus === 'AVAILABLE') {
+      await createNotification(
+        resource.owner_id,
+        'WISHLIST_AVAILABLE',
+        'Resource Listing Reactivated',
+        `Your resource listing "${resource.title}" has been reactivated by administration.`,
         resource.id,
         'resources'
       );
@@ -358,7 +406,7 @@ const getReports = async (req, res) => {
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
     const offset = (page - 1) * limit;
-    const { status, entity_type } = req.query;
+    const { status, entity_type, search } = req.query;
 
     let whereClause = 'WHERE 1=1';
     const params = [];
@@ -373,8 +421,17 @@ const getReports = async (req, res) => {
       params.push(entity_type.trim().toUpperCase());
     }
 
+    if (search && search.trim() !== '') {
+      whereClause += ' AND (r.reason LIKE ? OR r.description LIKE ? OR u_rep.name LIKE ? OR u_rep.email LIKE ?)';
+      const term = `%${search.trim()}%`;
+      params.push(term, term, term, term);
+    }
+
     const [countRows] = await db.query(
-      `SELECT COUNT(*) AS total FROM reports r ${whereClause}`,
+      `SELECT COUNT(*) AS total 
+       FROM reports r 
+       JOIN users u_rep ON r.reporter_id = u_rep.id 
+       ${whereClause}`,
       params
     );
     const total = countRows[0].total;
@@ -427,7 +484,8 @@ const getReports = async (req, res) => {
 const updateReportStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, admin_resolution, archive_resource } = req.body;
+    const { status, admin_resolution, reason, archive_resource } = req.body;
+    const adminId = req.user.id;
 
     const allowedStatuses = ['PENDING', 'UNDER_REVIEW', 'RESOLVED', 'DISMISSED'];
     if (!status || !allowedStatuses.includes(status.toUpperCase())) {
@@ -453,6 +511,8 @@ const updateReportStatus = async (req, res) => {
     }
 
     const report = reports[0];
+    const previousStatus = report.status;
+    const finalResolution = admin_resolution || reason || null;
 
     // Optionally archive reported resource if requested and valid
     if (archive_resource && report.reported_entity_type === 'RESOURCE') {
@@ -485,8 +545,25 @@ const updateReportStatus = async (req, res) => {
     // Update report
     await db.query(
       'UPDATE reports SET status = ?, admin_resolution = ? WHERE id = ?',
-      [normalizedStatus, admin_resolution || null, id]
+      [normalizedStatus, finalResolution, id]
     );
+
+    // M23: Record administrative audit log
+    await auditService.logAdminAction({
+      adminId,
+      actionType: 'REPORT_RESOLUTION',
+      targetEntityType: 'REPORT',
+      targetEntityId: report.id,
+      previousStatus: previousStatus,
+      newStatus: normalizedStatus,
+      reason: finalResolution,
+      metadata: {
+        reporter_id: report.reporter_id,
+        reported_entity_type: report.reported_entity_type,
+        reported_entity_id: report.reported_entity_id,
+        archive_resource: Boolean(archive_resource)
+      }
+    });
 
     // M17: If report was filed against a user, recalculate user's reputation score
     if (report.reported_entity_type === 'USER') {
@@ -509,7 +586,7 @@ const updateReportStatus = async (req, res) => {
       data: {
         id: report.id,
         status: normalizedStatus,
-        admin_resolution: admin_resolution || null
+        admin_resolution: finalResolution
       }
     });
   } catch (error) {
@@ -568,6 +645,18 @@ const triggerAutoArchive = async (req, res) => {
       limit: limit || req.query.limit
     });
 
+    // M23: Record audit log for system auto-archival trigger
+    await auditService.logAdminAction({
+      adminId: req.user.id,
+      actionType: 'AUTO_ARCHIVE_TRIGGER',
+      targetEntityType: 'SYSTEM',
+      targetEntityId: null,
+      previousStatus: null,
+      newStatus: null,
+      reason: `Auto-archival execution archived ${result.archived_count} listings out of ${result.scanned} scanned.`,
+      metadata: { expiry_days: result.expiry_days, archived_ids: result.archived_ids }
+    });
+
     return res.status(200).json({
       success: true,
       message: `Auto-archival complete. ${result.archived_count} listing(s) archived out of ${result.scanned} scanned.`,
@@ -609,6 +698,150 @@ const getExpiredResources = async (req, res) => {
   }
 };
 
+/**
+ * 11. Admin Audit Trail
+ * GET /api/admin/audit-logs
+ */
+const getAuditLogs = async (req, res) => {
+  try {
+    const result = await auditService.getAuditLogs(req.query);
+    return res.status(200).json({
+      success: true,
+      data: result.data,
+      pagination: result.pagination
+    });
+  } catch (error) {
+    console.error('Error fetching audit logs:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error while fetching audit logs.'
+    });
+  }
+};
+
+/**
+ * 12. User Moderation History
+ * GET /api/admin/users/:id/moderation-history
+ */
+const getUserModerationHistory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = parseInt(id, 10);
+    if (isNaN(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid user ID parameter.'
+      });
+    }
+
+    const history = await auditService.getEntityModerationHistory('USER', userId);
+    return res.status(200).json({
+      success: true,
+      data: history
+    });
+  } catch (error) {
+    console.error('Error fetching user moderation history:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error while fetching user history.'
+    });
+  }
+};
+
+/**
+ * 13. Resource Moderation History
+ * GET /api/admin/resources/:id/moderation-history
+ */
+const getResourceModerationHistory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const resourceId = parseInt(id, 10);
+    if (isNaN(resourceId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid resource ID parameter.'
+      });
+    }
+
+    const history = await auditService.getEntityModerationHistory('RESOURCE', resourceId);
+    return res.status(200).json({
+      success: true,
+      data: history
+    });
+  } catch (error) {
+    console.error('Error fetching resource moderation history:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error while fetching resource history.'
+    });
+  }
+};
+
+/**
+ * 14. Resource Reports Inspection
+ * GET /api/admin/resources/:id/reports
+ */
+const getResourceReports = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const resourceId = parseInt(id, 10);
+    if (isNaN(resourceId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid resource ID parameter.'
+      });
+    }
+
+    const reports = await auditService.getResourceReports(resourceId);
+    return res.status(200).json({
+      success: true,
+      data: reports
+    });
+  } catch (error) {
+    console.error('Error fetching resource reports:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error while fetching resource reports.'
+    });
+  }
+};
+
+/**
+ * 15. Single Report Details Inspection
+ * GET /api/admin/reports/:id
+ */
+const getReportDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const reportId = parseInt(id, 10);
+    if (isNaN(reportId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid report ID parameter.'
+      });
+    }
+
+    const report = await auditService.getReportDetails(reportId);
+    if (!report) {
+      return res.status(404).json({
+        success: false,
+        message: 'Report not found.'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: report
+    });
+  } catch (error) {
+    console.error('Error fetching report details:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error while fetching report details.'
+    });
+  }
+};
+
 module.exports = {
   getStats,
   getUsers,
@@ -619,5 +852,10 @@ module.exports = {
   updateReportStatus,
   getAdminUserReputation,
   triggerAutoArchive,
-  getExpiredResources
+  getExpiredResources,
+  getAuditLogs,
+  getUserModerationHistory,
+  getResourceModerationHistory,
+  getResourceReports,
+  getReportDetails
 };

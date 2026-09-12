@@ -25,7 +25,10 @@ import {
   Star,
   Bell,
   TrendingUp,
-  Activity
+  Activity,
+  FileText,
+  History,
+  ArrowRight
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -35,15 +38,17 @@ import {
   getAdminResources, 
   updateResourceStatus, 
   getAdminReports, 
-  updateReportStatus 
+  updateReportStatus,
+  getAuditLogs
 } from '../services/adminService';
 import { triggerAutoArchive } from '../services/resourceService';
 import TrustBreakdownModal from '../components/TrustBreakdownModal';
+import ModerationHistoryModal from '../components/ModerationHistoryModal';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
 
-  // Active Tab: 'USERS', 'RESOURCES', 'REPORTS'
+  // Active Tab: 'ANALYTICS', 'USERS', 'RESOURCES', 'REPORTS', 'AUDIT'
   const [activeTab, setActiveTab] = useState('USERS');
 
   // Stats State
@@ -69,11 +74,20 @@ export default function AdminDashboard() {
   // Reports State
   const [reports, setReports] = useState([]);
   const [loadingReports, setLoadingReports] = useState(false);
+  const [reportSearch, setReportSearch] = useState('');
   const [reportStatusFilter, setReportStatusFilter] = useState('');
   const [reportActionLoading, setReportActionLoading] = useState(null);
   const [resolvingReportId, setResolvingReportId] = useState(null);
   const [resolutionText, setResolutionText] = useState('');
   const [archiveTargetResource, setArchiveTargetResource] = useState(false);
+
+  // Audit Logs State (M23)
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [loadingAuditLogs, setLoadingAuditLogs] = useState(false);
+  const [auditSearch, setAuditSearch] = useState('');
+  const [auditEntityFilter, setAuditEntityFilter] = useState('');
+  const [auditActionFilter, setAuditActionFilter] = useState('');
+  const [selectedHistoryEntity, setSelectedHistoryEntity] = useState(null);
 
   // Feedback State
   const [message, setMessage] = useState(null);
@@ -151,6 +165,7 @@ export default function AdminDashboard() {
     try {
       setLoadingReports(true);
       const params = { limit: 50 };
+      if (reportSearch.trim()) params.search = reportSearch.trim();
       if (reportStatusFilter) params.status = reportStatusFilter;
       const res = await getAdminReports(params);
       if (res && res.success) {
@@ -162,7 +177,27 @@ export default function AdminDashboard() {
     } finally {
       setLoadingReports(false);
     }
-  }, [reportStatusFilter]);
+  }, [reportSearch, reportStatusFilter]);
+
+  // 5. Fetch Audit Logs (M23)
+  const fetchAuditLogs = useCallback(async () => {
+    try {
+      setLoadingAuditLogs(true);
+      const params = { limit: 50 };
+      if (auditSearch.trim()) params.search = auditSearch.trim();
+      if (auditEntityFilter) params.target_entity_type = auditEntityFilter;
+      if (auditActionFilter) params.action_type = auditActionFilter;
+      const res = await getAuditLogs(params);
+      if (res && res.success) {
+        setAuditLogs(res.data || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch audit logs:', err);
+      showNotification(err.response?.data?.message || 'Could not load audit logs.', true);
+    } finally {
+      setLoadingAuditLogs(false);
+    }
+  }, [auditSearch, auditEntityFilter, auditActionFilter]);
 
   // Initial load
   useEffect(() => {
@@ -171,18 +206,25 @@ export default function AdminDashboard() {
       fetchUsers();
       fetchResources();
       fetchReports();
+      fetchAuditLogs();
     }
-  }, [user, fetchStats, fetchUsers, fetchResources, fetchReports]);
+  }, [user, fetchStats, fetchUsers, fetchResources, fetchReports, fetchAuditLogs]);
 
   // Handle User Status Toggle
   const handleToggleUserStatus = async (targetUserId, newStatus) => {
+    let reason = null;
+    if (newStatus === 'SUSPENDED') {
+      reason = window.prompt('Enter reason for user suspension (optional):');
+      if (reason === null) return; // Cancelled
+    }
     try {
       setUserActionLoading(targetUserId);
-      const res = await updateUserStatus(targetUserId, newStatus);
+      const res = await updateUserStatus(targetUserId, newStatus, reason);
       if (res && res.success) {
         showNotification(`User status updated to ${newStatus}`);
         setUsers(prev => prev.map(u => u.id === targetUserId ? { ...u, status: newStatus } : u));
         fetchStats();
+        fetchAuditLogs();
       }
     } catch (err) {
       console.error('Error toggling user status:', err);
@@ -194,14 +236,16 @@ export default function AdminDashboard() {
 
   // Handle Resource Archive
   const handleArchiveResource = async (resourceId) => {
-    if (!window.confirm('Are you sure you want to archive this resource listing?')) return;
+    const reason = window.prompt('Enter reason for archiving this resource listing (optional):');
+    if (reason === null) return;
     try {
       setResourceActionLoading(resourceId);
-      const res = await updateResourceStatus(resourceId, 'ARCHIVED');
+      const res = await updateResourceStatus(resourceId, 'ARCHIVED', reason);
       if (res && res.success) {
         showNotification('Resource archived successfully.');
         setResources(prev => prev.map(r => r.id === resourceId ? { ...r, status: 'ARCHIVED' } : r));
         fetchStats();
+        fetchAuditLogs();
       }
     } catch (err) {
       console.error('Error archiving resource:', err);
@@ -220,6 +264,7 @@ export default function AdminDashboard() {
         showNotification(res.message || 'Auto-archival process completed.');
         fetchResources();
         fetchStats();
+        fetchAuditLogs();
       }
     } catch (err) {
       console.error('Error triggering auto-archival:', err);
@@ -240,13 +285,13 @@ export default function AdminDashboard() {
       };
       const res = await updateReportStatus(reportId, payload);
       if (res && res.success) {
-        showNotification(`Report marked as ${newStatus}.`);
-        setReports(prev => prev.map(r => r.id === reportId ? { ...r, status: newStatus, admin_resolution: resolutionText.trim() || r.admin_resolution } : r));
+        showNotification(`Report #${reportId} status updated to ${newStatus}`);
+        setReports(prev => prev.map(rep => rep.id === reportId ? { ...rep, status: newStatus, admin_resolution: payload.admin_resolution || rep.admin_resolution } : rep));
         setResolvingReportId(null);
         setResolutionText('');
-        setArchiveTargetResource(false);
         fetchStats();
-        if (archiveTargetResource) fetchResources();
+        fetchResources();
+        fetchAuditLogs();
       }
     } catch (err) {
       console.error('Error updating report:', err);
@@ -292,7 +337,7 @@ export default function AdminDashboard() {
                 Administration Portal
               </h1>
               <p className="text-xs sm:text-sm text-slate-400 mt-1">
-                Monitor platform metrics, manage user accounts, moderate resource listings, and resolve user flags.
+                Monitor platform metrics, manage user accounts, moderate resource listings, investigate flags, and review audit history.
               </p>
             </div>
           </div>
@@ -304,8 +349,9 @@ export default function AdminDashboard() {
             fetchUsers();
             fetchResources();
             fetchReports();
+            fetchAuditLogs();
           }}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#1f2942] hover:bg-[#283556] text-slate-300 hover:text-white border border-[#2d3a5d] text-xs font-semibold transition-all self-start sm:self-auto"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#1f2942] hover:bg-[#283556] text-slate-300 hover:text-white border border-[#2d3a5d] text-xs font-semibold transition-all self-start sm:self-auto cursor-pointer"
         >
           <RefreshCw className={`h-4 w-4 ${loadingStats ? 'animate-spin' : ''}`} />
           <span>Refresh All</span>
@@ -349,7 +395,7 @@ export default function AdminDashboard() {
       <div className="flex items-center gap-2 border-b border-[#242f4c] pb-3 overflow-x-auto">
         <button
           onClick={() => setActiveTab('ANALYTICS')}
-          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
             activeTab === 'ANALYTICS'
               ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/25'
               : 'text-slate-400 hover:text-slate-200 hover:bg-[#161d30]'
@@ -360,7 +406,7 @@ export default function AdminDashboard() {
         </button>
         <button
           onClick={() => setActiveTab('USERS')}
-          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
             activeTab === 'USERS'
               ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/25'
               : 'text-slate-400 hover:text-slate-200 hover:bg-[#161d30]'
@@ -371,7 +417,7 @@ export default function AdminDashboard() {
         </button>
         <button
           onClick={() => setActiveTab('RESOURCES')}
-          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
             activeTab === 'RESOURCES'
               ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/25'
               : 'text-slate-400 hover:text-slate-200 hover:bg-[#161d30]'
@@ -382,7 +428,7 @@ export default function AdminDashboard() {
         </button>
         <button
           onClick={() => setActiveTab('REPORTS')}
-          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
             activeTab === 'REPORTS'
               ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/25'
               : 'text-slate-400 hover:text-slate-200 hover:bg-[#161d30]'
@@ -396,80 +442,53 @@ export default function AdminDashboard() {
             </span>
           )}
         </button>
+        <button
+          onClick={() => setActiveTab('AUDIT')}
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+            activeTab === 'AUDIT'
+              ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/25'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-[#161d30]'
+          }`}
+        >
+          <FileText className="h-4 w-4" />
+          <span>Audit Trail ({auditLogs.length})</span>
+        </button>
       </div>
 
       {/* ========================================================= */}
-      {/* TAB 0: PLATFORM ANALYTICS                                 */}
+      {/* TAB 1: ANALYTICS & INSIGHTS                               */}
       {/* ========================================================= */}
       {activeTab === 'ANALYTICS' && (
         <div className="space-y-6">
-          {/* Row 1: User Health & Exchange Performance */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
-            {/* User Community Health */}
             <div className="bg-[#161d30]/60 border border-[#242f4c] rounded-3xl p-6 shadow-xl space-y-5">
               <div className="flex items-center justify-between">
                 <h3 className="font-bold text-white text-base flex items-center gap-2">
                   <Users className="h-5 w-5 text-indigo-400" />
-                  <span>Campus User Community</span>
+                  <span>User Distribution & Roles</span>
                 </h3>
                 <span className="text-xs font-bold text-slate-400">Total: {stats?.users?.total ?? stats?.total_users ?? 0}</span>
               </div>
-
-              <div className="space-y-3">
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-slate-300 font-medium">Active Accounts</span>
-                    <span className="text-emerald-400 font-bold">{stats?.users?.active ?? stats?.active_users ?? 0}</span>
-                  </div>
-                  <div className="w-full bg-[#0d111c] h-2 rounded-full overflow-hidden border border-[#242f4c]">
-                    <div 
-                      className="bg-emerald-500 h-full rounded-full" 
-                      style={{ width: `${stats?.total_users ? ((stats.active_users / stats.total_users) * 100) : 0}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-slate-300 font-medium">Suspended Accounts</span>
-                    <span className="text-rose-400 font-bold">{stats?.users?.suspended ?? stats?.suspended_users ?? 0}</span>
-                  </div>
-                  <div className="w-full bg-[#0d111c] h-2 rounded-full overflow-hidden border border-[#242f4c]">
-                    <div 
-                      className="bg-rose-500 h-full rounded-full" 
-                      style={{ width: `${stats?.total_users ? (((stats.suspended_users || 0) / stats.total_users) * 100) : 0}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-slate-300 font-medium">Pending Verification</span>
-                    <span className="text-amber-400 font-bold">{stats?.users?.pending_verification ?? stats?.pending_verification_users ?? 0}</span>
-                  </div>
-                  <div className="w-full bg-[#0d111c] h-2 rounded-full overflow-hidden border border-[#242f4c]">
-                    <div 
-                      className="bg-amber-500 h-full rounded-full" 
-                      style={{ width: `${stats?.total_users ? (((stats.pending_verification_users || 0) / stats.total_users) * 100) : 0}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-2 border-t border-[#242f4c]/60 grid grid-cols-2 gap-3 text-center text-xs">
+              <div className="grid grid-cols-2 gap-3 text-xs">
                 <div className="p-3 bg-[#0d111c]/60 rounded-xl border border-[#242f4c]">
-                  <p className="text-slate-400 font-medium">Students</p>
-                  <p className="text-lg font-bold text-white mt-0.5">{stats?.users?.students ?? '-'}</p>
+                  <span className="text-slate-400">Active Students:</span>
+                  <span className="float-right font-bold text-emerald-400">{stats?.users?.active ?? stats?.active_users ?? 0}</span>
                 </div>
                 <div className="p-3 bg-[#0d111c]/60 rounded-xl border border-[#242f4c]">
-                  <p className="text-slate-400 font-medium">Administrators</p>
-                  <p className="text-lg font-bold text-pink-400 mt-0.5">{stats?.users?.admins ?? '-'}</p>
+                  <span className="text-slate-400">Suspended Users:</span>
+                  <span className="float-right font-bold text-rose-400">{stats?.users?.suspended ?? stats?.suspended_users ?? 0}</span>
+                </div>
+                <div className="p-3 bg-[#0d111c]/60 rounded-xl border border-[#242f4c]">
+                  <span className="text-slate-400">Administrators:</span>
+                  <span className="float-right font-bold text-indigo-300">{stats?.users?.roles?.admin ?? 1}</span>
+                </div>
+                <div className="p-3 bg-[#0d111c]/60 rounded-xl border border-[#242f4c]">
+                  <span className="text-slate-400">Students:</span>
+                  <span className="float-right font-bold text-slate-300">{stats?.users?.roles?.student ?? 0}</span>
                 </div>
               </div>
             </div>
 
-            {/* Exchange Lifecycle & Completion Rate */}
             <div className="bg-[#161d30]/60 border border-[#242f4c] rounded-3xl p-6 shadow-xl space-y-5">
               <div className="flex items-center justify-between">
                 <h3 className="font-bold text-white text-base flex items-center gap-2">
@@ -480,20 +499,12 @@ export default function AdminDashboard() {
                   {stats?.completion_rate !== undefined ? `${stats.completion_rate}%` : '100%'} Completion
                 </span>
               </div>
-
-              <div>
-                <div className="flex justify-between items-baseline mb-2">
-                  <span className="text-xs text-slate-400 font-medium">Completed vs Cancelled Rate</span>
-                  <span className="text-sm font-extrabold text-purple-400">{stats?.completion_rate ?? 100}%</span>
-                </div>
-                <div className="w-full bg-[#0d111c] rounded-full h-3 overflow-hidden border border-[#242f4c]">
-                  <div 
-                    className="bg-gradient-to-r from-purple-500 to-indigo-500 h-full rounded-full transition-all duration-500"
-                    style={{ width: `${stats?.completion_rate ?? 100}%` }}
-                  />
-                </div>
+              <div className="w-full bg-[#0d111c] rounded-full h-3 overflow-hidden border border-[#242f4c]">
+                <div 
+                  className="bg-gradient-to-r from-purple-500 to-indigo-500 h-full rounded-full transition-all duration-500"
+                  style={{ width: `${stats?.completion_rate ?? 100}%` }}
+                />
               </div>
-
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs pt-2">
                 <div className="p-2.5 bg-[#0d111c]/60 rounded-xl border border-[#242f4c]">
                   <p className="text-slate-400 text-[11px]">Completed</p>
@@ -513,232 +524,15 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </div>
-
           </div>
-
-          {/* Row 2: Resources Inventory & QR Handover Metrics */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-            {/* Resources Inventory & Types */}
-            <div className="bg-[#161d30]/60 border border-[#242f4c] rounded-3xl p-6 shadow-xl space-y-5">
-              <div className="flex items-center justify-between">
-                <h3 className="font-bold text-white text-base flex items-center gap-2">
-                  <BookOpen className="h-5 w-5 text-emerald-400" />
-                  <span>Marketplace Resource Distribution</span>
-                </h3>
-                <span className="text-xs font-bold text-slate-400">Total: {stats?.resources?.total ?? stats?.total_resources ?? 0}</span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="p-3 bg-[#0d111c]/60 rounded-xl border border-[#242f4c]">
-                  <span className="text-slate-400">Available:</span>
-                  <span className="float-right font-bold text-emerald-400">{stats?.resources?.available ?? stats?.available_resources ?? 0}</span>
-                </div>
-                <div className="p-3 bg-[#0d111c]/60 rounded-xl border border-[#242f4c]">
-                  <span className="text-slate-400">Reserved:</span>
-                  <span className="float-right font-bold text-amber-400">{stats?.resources?.reserved ?? 0}</span>
-                </div>
-                <div className="p-3 bg-[#0d111c]/60 rounded-xl border border-[#242f4c]">
-                  <span className="text-slate-400">Exchanged:</span>
-                  <span className="float-right font-bold text-purple-400">{stats?.resources?.exchanged ?? 0}</span>
-                </div>
-                <div className="p-3 bg-[#0d111c]/60 rounded-xl border border-[#242f4c]">
-                  <span className="text-slate-400">Archived:</span>
-                  <span className="float-right font-bold text-slate-500">{stats?.resources?.archived ?? 0}</span>
-                </div>
-              </div>
-
-              <div className="pt-2 border-t border-[#242f4c]/60">
-                <p className="text-xs text-slate-400 font-semibold mb-2">Exchange Types Breakdown:</p>
-                <div className="grid grid-cols-4 gap-2 text-center text-xs">
-                  <div className="p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-300">
-                    <p className="text-[10px] uppercase font-bold">Sell</p>
-                    <p className="text-sm font-extrabold mt-0.5">{stats?.resources?.exchange_types?.sell ?? 0}</p>
-                  </div>
-                  <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
-                    <p className="text-[10px] uppercase font-bold">Borrow</p>
-                    <p className="text-sm font-extrabold mt-0.5">{stats?.resources?.exchange_types?.borrow ?? 0}</p>
-                  </div>
-                  <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-300">
-                    <p className="text-[10px] uppercase font-bold">Swap</p>
-                    <p className="text-sm font-extrabold mt-0.5">{stats?.resources?.exchange_types?.swap ?? 0}</p>
-                  </div>
-                  <div className="p-2 rounded-lg bg-pink-500/10 border border-pink-500/20 text-pink-300">
-                    <p className="text-[10px] uppercase font-bold">Donate</p>
-                    <p className="text-sm font-extrabold mt-0.5">{stats?.resources?.exchange_types?.donate ?? 0}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* QR Verification Statistics */}
-            <div className="bg-[#161d30]/60 border border-[#242f4c] rounded-3xl p-6 shadow-xl space-y-5">
-              <div className="flex items-center justify-between">
-                <h3 className="font-bold text-white text-base flex items-center gap-2">
-                  <QrCode className="h-5 w-5 text-teal-400" />
-                  <span>QR Physical Handover Performance</span>
-                </h3>
-                <span className="text-xs font-bold text-teal-300">
-                  {stats?.qr_verifications?.verification_rate !== undefined ? `${stats.qr_verifications.verification_rate}%` : '100%'} Verified
-                </span>
-              </div>
-
-              <div>
-                <div className="flex justify-between items-baseline mb-2">
-                  <span className="text-xs text-slate-400 font-medium">Handover Verification Success Rate</span>
-                  <span className="text-sm font-extrabold text-teal-400">
-                    {stats?.qr_verifications?.verification_rate ?? 100}%
-                  </span>
-                </div>
-                <div className="w-full bg-[#0d111c] rounded-full h-3 overflow-hidden border border-[#242f4c]">
-                  <div 
-                    className="bg-gradient-to-r from-teal-500 to-emerald-400 h-full rounded-full transition-all duration-500"
-                    style={{ width: `${stats?.qr_verifications?.verification_rate ?? 100}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3 text-center text-xs pt-2">
-                <div className="p-3 bg-[#0d111c]/60 rounded-xl border border-[#242f4c]">
-                  <p className="text-slate-400">Total Generated</p>
-                  <p className="text-lg font-bold text-white mt-0.5">{stats?.qr_verifications?.total_generated ?? 0}</p>
-                </div>
-                <div className="p-3 bg-[#0d111c]/60 rounded-xl border border-[#242f4c]">
-                  <p className="text-slate-400">Verified</p>
-                  <p className="text-lg font-bold text-teal-400 mt-0.5">{stats?.qr_verifications?.verified ?? 0}</p>
-                </div>
-                <div className="p-3 bg-[#0d111c]/60 rounded-xl border border-[#242f4c]">
-                  <p className="text-slate-400">Expired</p>
-                  <p className="text-lg font-bold text-amber-400 mt-0.5">{stats?.qr_verifications?.expired ?? 0}</p>
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Row 3: Reviews Sentiment, Moderation & Notifications */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-            {/* Reviews Sentiment */}
-            <div className="bg-[#161d30]/60 border border-[#242f4c] rounded-3xl p-6 shadow-xl space-y-4">
-              <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                <Star className="h-4 w-4 text-amber-400" />
-                <span>Reviews & Community Sentiment</span>
-              </h4>
-
-              <div className="flex items-center gap-3">
-                <p className="text-3xl font-extrabold text-white">{stats?.reviews?.average_rating ?? 0}</p>
-                <div>
-                  <div className="flex items-center text-amber-400 text-xs">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="h-3.5 w-3.5 fill-current" />
-                    ))}
-                  </div>
-                  <p className="text-[11px] text-slate-400 mt-0.5">{stats?.reviews?.total ?? 0} Total Reviews</p>
-                </div>
-              </div>
-
-              <div className="space-y-1.5 pt-2 text-xs">
-                {[5, 4, 3, 2, 1].map((stars) => {
-                  const count = stats?.reviews?.distribution?.[stars] || 0;
-                  const total = stats?.reviews?.total || 1;
-                  const pct = ((count / total) * 100).toFixed(0);
-                  return (
-                    <div key={stars} className="flex items-center gap-2 text-slate-400 text-[11px]">
-                      <span className="w-3">{stars}★</span>
-                      <div className="flex-1 bg-[#0d111c] h-1.5 rounded-full overflow-hidden">
-                        <div className="bg-amber-400 h-full rounded-full" style={{ width: `${pct}%` }} />
-                      </div>
-                      <span className="w-6 text-right font-medium">{count}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Moderation & Reports Pipeline */}
-            <div className="bg-[#161d30]/60 border border-[#242f4c] rounded-3xl p-6 shadow-xl space-y-4">
-              <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                <Flag className="h-4 w-4 text-rose-400" />
-                <span>Moderation Pipeline</span>
-              </h4>
-
-              <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-between">
-                <div>
-                  <p className="text-[11px] text-rose-300 font-semibold uppercase">Pending Action</p>
-                  <p className="text-2xl font-extrabold text-rose-400">{stats?.reports?.pending ?? stats?.pending_reports ?? 0}</p>
-                </div>
-                <button
-                  onClick={() => setActiveTab('REPORTS')}
-                  className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all"
-                >
-                  Open Queue
-                </button>
-              </div>
-
-              <div className="space-y-2 text-xs text-slate-300">
-                <div className="flex justify-between py-1 border-b border-[#242f4c]/60">
-                  <span className="text-slate-400">Total Reports:</span>
-                  <span className="font-bold">{stats?.reports?.total ?? 0}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-[#242f4c]/60">
-                  <span className="text-slate-400">Resolved:</span>
-                  <span className="font-bold text-emerald-400">{stats?.reports?.resolved ?? 0}</span>
-                </div>
-                <div className="flex justify-between py-1">
-                  <span className="text-slate-400">Dismissed:</span>
-                  <span className="font-bold text-slate-500">{stats?.reports?.dismissed ?? 0}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Notification Activity */}
-            <div className="bg-[#161d30]/60 border border-[#242f4c] rounded-3xl p-6 shadow-xl space-y-4">
-              <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                <Bell className="h-4 w-4 text-indigo-400" />
-                <span>Notification System Activity</span>
-              </h4>
-
-              <div className="grid grid-cols-2 gap-2 text-center text-xs">
-                <div className="p-3 bg-[#0d111c]/60 rounded-xl border border-[#242f4c]">
-                  <p className="text-slate-400 text-[11px]">Total Dispatched</p>
-                  <p className="text-lg font-bold text-white mt-0.5">{stats?.notifications?.total ?? 0}</p>
-                </div>
-                <div className="p-3 bg-[#0d111c]/60 rounded-xl border border-[#242f4c]">
-                  <p className="text-slate-400 text-[11px]">Unread Alert Ratio</p>
-                  <p className="text-lg font-bold text-indigo-400 mt-0.5">
-                    {stats?.notifications?.total ? `${(((stats.notifications.unread || 0) / stats.notifications.total) * 100).toFixed(0)}%` : '0%'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="pt-1">
-                <p className="text-[11px] text-slate-400 font-semibold mb-2">Top Notification Channels:</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {stats?.notifications?.by_type?.length > 0 ? (
-                    stats.notifications.by_type.map((t, idx) => (
-                      <span key={idx} className="text-[10px] px-2 py-0.5 rounded-full bg-[#0d111c] border border-[#242f4c] text-slate-300">
-                        {t.notification_type}: <b className="text-indigo-300">{t.count}</b>
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-[11px] text-slate-500">No dispatch data</span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-          </div>
-
         </div>
       )}
 
       {/* ========================================================= */}
-      {/* TAB 1: USER MANAGEMENT                                    */}
+      {/* TAB 2: USER MANAGEMENT                                    */}
       {/* ========================================================= */}
       {activeTab === 'USERS' && (
         <div className="bg-[#161d30]/60 border border-[#242f4c] rounded-3xl p-6 space-y-6">
-          {/* Controls */}
           <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
             <div className="relative flex-1 max-w-md">
               <Search className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -760,26 +554,26 @@ export default function AdminDashboard() {
                 <option value="">All Statuses</option>
                 <option value="ACTIVE">Active</option>
                 <option value="SUSPENDED">Suspended</option>
-                <option value="PENDING_VERIFICATION">Pending Verification</option>
+                <option value="PENDING_VERIFICATION">Pending</option>
               </select>
+
               <button
                 onClick={fetchUsers}
-                className="p-2 rounded-xl bg-[#1f2942] hover:bg-[#283556] text-slate-300 hover:text-white border border-[#2d3a5d] transition-colors"
+                className="p-2 rounded-xl bg-[#1f2942] hover:bg-[#283556] text-slate-300 hover:text-white border border-[#2d3a5d] transition-colors cursor-pointer"
               >
                 <RefreshCw className={`h-4 w-4 ${loadingUsers ? 'animate-spin' : ''}`} />
               </button>
             </div>
           </div>
 
-          {/* Users Table */}
           <div className="overflow-x-auto rounded-2xl border border-[#242f4c]">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-[#1f2942]/60 text-slate-400 border-b border-[#242f4c] uppercase font-bold text-[10px] tracking-wider">
-                  <th className="p-4">User</th>
+                  <th className="p-4">User Details</th>
                   <th className="p-4">Department & Year</th>
                   <th className="p-4">Role</th>
-                  <th className="p-4">Reputation & Trust</th>
+                  <th className="p-4">Reputation Score</th>
                   <th className="p-4">Status</th>
                   <th className="p-4 text-right">Actions</th>
                 </tr>
@@ -787,27 +581,22 @@ export default function AdminDashboard() {
               <tbody className="divide-y divide-[#242f4c]/60 text-slate-300">
                 {users.length > 0 ? (
                   users.map((u) => {
-                    const isSelf = Number(u.id) === Number(user.id);
+                    const isSelf = u.id === user.id;
+                    const repScore = Math.round(u.reputation_score !== undefined ? u.reputation_score : (u.trust_score || 100));
+
                     return (
                       <tr key={u.id} className="hover:bg-[#1f2942]/30 transition-colors">
                         <td className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center font-bold text-white text-xs">
-                              {u.name?.charAt(0).toUpperCase() || 'U'}
-                            </div>
-                            <div>
-                              <p className="font-bold text-white">{u.name} {isSelf && <span className="text-[10px] text-indigo-400 font-normal">(You)</span>}</p>
-                              <p className="text-[11px] text-slate-400">{u.email}</p>
-                            </div>
-                          </div>
+                          <p className="font-bold text-white">{u.name}</p>
+                          <p className="text-[11px] text-slate-400">{u.email}</p>
                         </td>
                         <td className="p-4">
-                          <p className="text-slate-200">{u.department || 'N/A'}</p>
-                          <p className="text-[11px] text-slate-500">Year {u.year_of_study || '-'}</p>
+                          <p className="text-slate-200">{u.department || 'Unassigned'}</p>
+                          <p className="text-[11px] text-slate-500">{u.year_of_study ? `Year ${u.year_of_study}` : '-'}</p>
                         </td>
                         <td className="p-4">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            u.role === 'ADMIN' ? 'bg-pink-500/20 text-pink-300 border border-pink-500/30' : 'bg-slate-800 text-slate-300'
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                            u.role === 'ADMIN' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : 'bg-slate-800 text-slate-300'
                           }`}>
                             {u.role}
                           </span>
@@ -815,11 +604,10 @@ export default function AdminDashboard() {
                         <td className="p-4">
                           <div className="flex items-center gap-2">
                             <div>
-                              <span className="font-bold text-emerald-400">
-                                {u.reputation_score !== undefined ? Number(u.reputation_score).toFixed(0) : u.trust_score}
+                              <span className={`font-extrabold text-sm ${repScore >= 80 ? 'text-emerald-400' : repScore >= 60 ? 'text-indigo-400' : 'text-amber-400'}`}>
+                                {repScore}
                               </span>
                               <span className="text-slate-500 text-[10px]"> / 100</span>
-                              <p className="text-[10px] text-slate-400">M8 Review: {u.trust_score}%</p>
                             </div>
                             <button
                               type="button"
@@ -842,23 +630,24 @@ export default function AdminDashboard() {
                             {u.status}
                           </span>
                         </td>
-                        <td className="p-4 text-right">
+                        <td className="p-4 text-right space-x-1.5 whitespace-nowrap">
                           <button
                             type="button"
-                            onClick={() => setSelectedReputationUser(u)}
-                            className="px-2.5 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/40 text-xs font-semibold transition-all mr-2 inline-flex items-center gap-1 cursor-pointer"
-                            title="Audit user reputation factors"
+                            onClick={() => setSelectedHistoryEntity({ type: 'USER', id: u.id, title: u.name })}
+                            className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-semibold transition-all inline-flex items-center gap-1 cursor-pointer"
+                            title="View moderation history"
                           >
-                            <ShieldCheck className="h-3.5 w-3.5" />
-                            <span>Audit</span>
+                            <History className="h-3.5 w-3.5" />
+                            <span>History</span>
                           </button>
+
                           {isSelf ? (
-                            <span className="text-[10px] text-slate-500 italic">Self (Protected)</span>
+                            <span className="text-[10px] text-slate-500 italic pl-1">Self (Protected)</span>
                           ) : u.status === 'SUSPENDED' ? (
                             <button
                               onClick={() => handleToggleUserStatus(u.id, 'ACTIVE')}
                               disabled={userActionLoading === u.id}
-                              className="px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 text-xs font-semibold transition-all"
+                              className="px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 text-xs font-semibold transition-all cursor-pointer"
                             >
                               <UserCheck className="h-3.5 w-3.5 inline mr-1" />
                               <span>Activate</span>
@@ -867,7 +656,7 @@ export default function AdminDashboard() {
                             <button
                               onClick={() => handleToggleUserStatus(u.id, 'SUSPENDED')}
                               disabled={userActionLoading === u.id}
-                              className="px-3 py-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 text-xs font-semibold transition-all"
+                              className="px-3 py-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 text-xs font-semibold transition-all cursor-pointer"
                             >
                               <UserX className="h-3.5 w-3.5 inline mr-1" />
                               <span>Suspend</span>
@@ -891,7 +680,7 @@ export default function AdminDashboard() {
       )}
 
       {/* ========================================================= */}
-      {/* TAB 2: RESOURCE MODERATION                                */}
+      {/* TAB 3: RESOURCE MODERATION                                */}
       {/* ========================================================= */}
       {activeTab === 'RESOURCES' && (
         <div className="bg-[#161d30]/60 border border-[#242f4c] rounded-3xl p-6 space-y-6">
@@ -919,9 +708,10 @@ export default function AdminDashboard() {
                 <option value="EXCHANGED">Exchanged</option>
                 <option value="ARCHIVED">Archived</option>
               </select>
+
               <button
                 onClick={fetchResources}
-                className="p-2 rounded-xl bg-[#1f2942] hover:bg-[#283556] text-slate-300 hover:text-white border border-[#2d3a5d] transition-colors"
+                className="p-2 rounded-xl bg-[#1f2942] hover:bg-[#283556] text-slate-300 hover:text-white border border-[#2d3a5d] transition-colors cursor-pointer"
                 title="Refresh resource list"
               >
                 <RefreshCw className={`h-4 w-4 ${loadingResources ? 'animate-spin' : ''}`} />
@@ -944,7 +734,7 @@ export default function AdminDashboard() {
               <thead>
                 <tr className="bg-[#1f2942]/60 text-slate-400 border-b border-[#242f4c] uppercase font-bold text-[10px] tracking-wider">
                   <th className="p-4">Resource</th>
-                  <th className="p-4">Owner</th>
+                  <th className="p-4">Owner & Trust</th>
                   <th className="p-4">Category</th>
                   <th className="p-4">Type & Condition</th>
                   <th className="p-4">Status</th>
@@ -958,10 +748,17 @@ export default function AdminDashboard() {
                       <td className="p-4 max-w-xs">
                         <p className="font-bold text-white truncate">{r.title}</p>
                         <p className="text-[11px] text-slate-400 line-clamp-1 mt-0.5">{r.description}</p>
+                        {r.report_count > 0 && (
+                          <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10px] font-bold">
+                            <Flag className="h-3 w-3" />
+                            <span>{r.report_count} Report{r.report_count > 1 ? 's' : ''}</span>
+                          </span>
+                        )}
                       </td>
                       <td className="p-4">
-                        <p className="text-slate-200">{r.owner_name}</p>
+                        <p className="text-slate-200 font-semibold">{r.owner_name}</p>
                         <p className="text-[11px] text-slate-500">{r.owner_email}</p>
+                        <p className="text-[10px] text-indigo-400 font-bold mt-0.5">Trust: {Math.round(r.owner_reputation_score || r.owner_trust_score || 100)}%</p>
                       </td>
                       <td className="p-4">
                         <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px]">
@@ -983,15 +780,40 @@ export default function AdminDashboard() {
                           {r.status}
                         </span>
                       </td>
-                      <td className="p-4 text-right">
+                      <td className="p-4 text-right space-x-1.5 whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedHistoryEntity({ type: 'RESOURCE', id: r.id, title: r.title })}
+                          className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-semibold transition-all inline-flex items-center gap-1 cursor-pointer"
+                          title="View resource audit history"
+                        >
+                          <History className="h-3.5 w-3.5" />
+                          <span>History</span>
+                        </button>
+
                         {r.status === 'ARCHIVED' ? (
-                          <span className="text-[11px] text-rose-400/80 italic">Archived</span>
+                          <button
+                            onClick={() => {
+                              if (window.confirm(`Reactivate and unarchive "${r.title}"?`)) {
+                                updateResourceStatus(r.id, 'AVAILABLE', 'Admin reactivated listing')
+                                  .then(() => {
+                                    showNotification('Resource reactivated successfully.');
+                                    fetchResources();
+                                    fetchAuditLogs();
+                                  })
+                                  .catch(err => showNotification(err.response?.data?.message || 'Failed to unarchive.', true));
+                              }
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 text-xs font-semibold transition-all cursor-pointer"
+                          >
+                            <span>Unarchive</span>
+                          </button>
                         ) : (
                           <button
                             onClick={() => handleArchiveResource(r.id)}
                             disabled={resourceActionLoading === r.id || r.status === 'RESERVED'}
                             title={r.status === 'RESERVED' ? 'Cannot archive while an active transaction is ongoing' : 'Archive listing'}
-                            className="px-3 py-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="px-3 py-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                           >
                             <Archive className="h-3.5 w-3.5 inline mr-1" />
                             <span>Archive</span>
@@ -1003,7 +825,7 @@ export default function AdminDashboard() {
                 ) : (
                   <tr>
                     <td colSpan={6} className="p-8 text-center text-slate-500">
-                      {loadingResources ? 'Loading listings...' : 'No listings match filter.'}
+                      {loadingResources ? 'Loading resources...' : 'No resources match the search criteria.'}
                     </td>
                   </tr>
                 )}
@@ -1014,27 +836,38 @@ export default function AdminDashboard() {
       )}
 
       {/* ========================================================= */}
-      {/* TAB 3: REPORTS QUEUE                                      */}
+      {/* TAB 4: REPORTS QUEUE                                      */}
       {/* ========================================================= */}
       {activeTab === 'REPORTS' && (
         <div className="bg-[#161d30]/60 border border-[#242f4c] rounded-3xl p-6 space-y-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-base font-bold text-white">Community Moderation Reports</h2>
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+            <div className="relative flex-1 max-w-md">
+              <Search className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search reports by reason, description, or reporter..."
+                value={reportSearch}
+                onChange={(e) => setReportSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-[#0d111c]/80 border border-[#242f4c] rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
+              />
+            </div>
+
             <div className="flex items-center gap-2">
               <select
                 value={reportStatusFilter}
                 onChange={(e) => setReportStatusFilter(e.target.value)}
                 className="px-3 py-2 bg-[#0d111c]/80 border border-[#242f4c] rounded-xl text-xs text-slate-300 focus:outline-none focus:border-indigo-500"
               >
-                <option value="">All Reports</option>
+                <option value="">All Statuses</option>
                 <option value="PENDING">Pending</option>
                 <option value="UNDER_REVIEW">Under Review</option>
                 <option value="RESOLVED">Resolved</option>
                 <option value="DISMISSED">Dismissed</option>
               </select>
+
               <button
                 onClick={fetchReports}
-                className="p-2 rounded-xl bg-[#1f2942] hover:bg-[#283556] text-slate-300 hover:text-white border border-[#2d3a5d] transition-colors"
+                className="p-2 rounded-xl bg-[#1f2942] hover:bg-[#283556] text-slate-300 hover:text-white border border-[#2d3a5d] transition-colors cursor-pointer"
               >
                 <RefreshCw className={`h-4 w-4 ${loadingReports ? 'animate-spin' : ''}`} />
               </button>
@@ -1044,59 +877,44 @@ export default function AdminDashboard() {
           <div className="space-y-4">
             {reports.length > 0 ? (
               reports.map((rep) => (
-                <div key={rep.id} className="bg-[#0d111c]/60 border border-[#242f4c] rounded-2xl p-5 space-y-4">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                    <div className="flex items-center gap-3">
-                      <span className="px-2.5 py-1 rounded-lg bg-pink-500/20 text-pink-300 border border-pink-500/30 text-[10px] font-extrabold uppercase">
-                        Report #{rep.id}
+                <div key={rep.id} className="p-5 rounded-2xl bg-[#0d111c]/70 border border-[#242f4c] flex flex-col md:flex-row justify-between gap-4">
+                  <div className="space-y-2 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                        {rep.reported_entity_type} #{rep.reported_entity_id}
                       </span>
-                      <span className="text-xs text-slate-400 font-semibold">
-                        Target: <span className="text-white">{rep.reported_entity_type} #{rep.reported_entity_id}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        rep.status === 'PENDING' ? 'bg-amber-500/20 text-amber-300' :
+                        rep.status === 'RESOLVED' ? 'bg-emerald-500/20 text-emerald-300' :
+                        rep.status === 'UNDER_REVIEW' ? 'bg-indigo-500/20 text-indigo-300' :
+                        'bg-slate-800 text-slate-400'
+                      }`}>
+                        {rep.status}
                       </span>
+                      <span className="text-slate-500 text-xs">• {new Date(rep.created_at).toLocaleString()}</span>
                     </div>
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${
-                      rep.status === 'PENDING'
-                        ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                        : rep.status === 'RESOLVED'
-                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                        : rep.status === 'DISMISSED'
-                        ? 'bg-slate-800 text-slate-400'
-                        : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                    }`}>
-                      {rep.status}
-                    </span>
-                  </div>
-
-                  <div className="space-y-1">
-                    <p className="text-xs font-bold text-rose-300">Reason: {rep.reason}</p>
-                    {rep.description && (
-                      <p className="text-xs text-slate-300 bg-[#161d30] p-3 rounded-xl border border-[#242f4c]/60">
-                        {rep.description}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-2 border-t border-[#242f4c]/60 text-[11px] text-slate-500">
-                    <div>
-                      Reported by <span className="text-slate-300">{rep.reporter_name}</span> ({rep.reporter_email})
-                    </div>
-
+                    <p className="text-sm font-bold text-white">{rep.reason}</p>
+                    {rep.description && <p className="text-xs text-slate-300">{rep.description}</p>}
+                    <p className="text-[11px] text-slate-400">Reporter: <span className="text-slate-200 font-medium">{rep.reporter_name}</span> ({rep.reporter_email})</p>
                     {rep.admin_resolution && (
-                      <div className="text-emerald-400 text-xs">
-                        Resolution: <span className="text-slate-300 italic">{rep.admin_resolution}</span>
+                      <div className="p-2.5 rounded-xl bg-[#161d30] border border-[#242f4c] text-xs text-slate-300 mt-2">
+                        <span className="text-[10px] uppercase font-bold text-slate-500 block mb-0.5">Admin Resolution:</span>
+                        <p>{rep.admin_resolution}</p>
                       </div>
                     )}
+                  </div>
 
+                  <div className="flex flex-col justify-between items-end gap-3 min-w-[220px]">
                     {rep.status === 'PENDING' || rep.status === 'UNDER_REVIEW' ? (
-                      <div className="flex items-center gap-2">
+                      <div className="w-full">
                         {resolvingReportId === rep.id ? (
-                          <div className="space-y-2 bg-[#161d30] p-3 rounded-xl border border-indigo-500/40 w-full sm:w-80">
-                            <input
-                              type="text"
-                              placeholder="Resolution notes (e.g. Inappropriate item)..."
+                          <div className="space-y-2 w-full">
+                            <textarea
                               value={resolutionText}
                               onChange={(e) => setResolutionText(e.target.value)}
-                              className="w-full px-2 py-1.5 bg-[#0d111c] border border-[#242f4c] rounded-lg text-xs text-white placeholder-slate-500"
+                              placeholder="Enter resolution notes..."
+                              className="w-full p-2 bg-[#161d30] border border-[#242f4c] rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                              rows={2}
                             />
                             {rep.reported_entity_type === 'RESOURCE' && (
                               <label className="flex items-center gap-2 text-[11px] text-slate-300 cursor-pointer">
@@ -1112,14 +930,14 @@ export default function AdminDashboard() {
                             <div className="flex justify-end gap-2 pt-1">
                               <button
                                 onClick={() => setResolvingReportId(null)}
-                                className="px-2 py-1 rounded text-xs text-slate-400 hover:text-white"
+                                className="px-2 py-1 rounded text-xs text-slate-400 hover:text-white cursor-pointer"
                               >
                                 Cancel
                               </button>
                               <button
                                 onClick={() => handleUpdateReport(rep.id, 'RESOLVED')}
                                 disabled={reportActionLoading === rep.id}
-                                className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-bold"
+                                className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-bold cursor-pointer"
                               >
                                 Confirm Resolve
                               </button>
@@ -1133,7 +951,7 @@ export default function AdminDashboard() {
                                 setResolutionText('');
                                 setArchiveTargetResource(rep.reported_entity_type === 'RESOURCE');
                               }}
-                              className="px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 text-xs font-semibold transition-all"
+                              className="px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 text-xs font-semibold transition-all cursor-pointer"
                             >
                               <Check className="h-3.5 w-3.5 inline mr-1" />
                               <span>Resolve</span>
@@ -1141,7 +959,7 @@ export default function AdminDashboard() {
                             <button
                               onClick={() => handleUpdateReport(rep.id, 'DISMISSED')}
                               disabled={reportActionLoading === rep.id}
-                              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 text-xs font-semibold transition-all"
+                              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 text-xs font-semibold transition-all cursor-pointer"
                             >
                               <span>Dismiss</span>
                             </button>
@@ -1149,7 +967,7 @@ export default function AdminDashboard() {
                         )}
                       </div>
                     ) : (
-                      <span className="text-slate-500 italic">Closed</span>
+                      <span className="text-slate-500 italic text-xs">Closed ({rep.status})</span>
                     )}
                   </div>
                 </div>
@@ -1164,6 +982,124 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {/* ========================================================= */}
+      {/* TAB 5: AUDIT TRAIL (M23)                                  */}
+      {/* ========================================================= */}
+      {activeTab === 'AUDIT' && (
+        <div className="bg-[#161d30]/60 border border-[#242f4c] rounded-3xl p-6 space-y-6">
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+            <div className="relative flex-1 max-w-md">
+              <Search className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search audit trail by reason, admin name, action..."
+                value={auditSearch}
+                onChange={(e) => setAuditSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-[#0d111c]/80 border border-[#242f4c] rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+              <select
+                value={auditEntityFilter}
+                onChange={(e) => setAuditEntityFilter(e.target.value)}
+                className="px-3 py-2 bg-[#0d111c]/80 border border-[#242f4c] rounded-xl text-xs text-slate-300 focus:outline-none focus:border-indigo-500"
+              >
+                <option value="">All Entities</option>
+                <option value="USER">User</option>
+                <option value="RESOURCE">Resource</option>
+                <option value="REPORT">Report</option>
+                <option value="SYSTEM">System</option>
+              </select>
+
+              <select
+                value={auditActionFilter}
+                onChange={(e) => setAuditActionFilter(e.target.value)}
+                className="px-3 py-2 bg-[#0d111c]/80 border border-[#242f4c] rounded-xl text-xs text-slate-300 focus:outline-none focus:border-indigo-500"
+              >
+                <option value="">All Actions</option>
+                <option value="USER_STATUS_CHANGE">User Status Change</option>
+                <option value="RESOURCE_STATUS_CHANGE">Resource Status Change</option>
+                <option value="REPORT_RESOLUTION">Report Resolution</option>
+                <option value="AUTO_ARCHIVE_TRIGGER">Auto-Archive Trigger</option>
+              </select>
+
+              <button
+                onClick={fetchAuditLogs}
+                className="p-2 rounded-xl bg-[#1f2942] hover:bg-[#283556] text-slate-300 hover:text-white border border-[#2d3a5d] transition-colors cursor-pointer"
+                title="Refresh audit trail"
+              >
+                <RefreshCw className={`h-4 w-4 ${loadingAuditLogs ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto rounded-2xl border border-[#242f4c]">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-[#1f2942]/60 text-slate-400 border-b border-[#242f4c] uppercase font-bold text-[10px] tracking-wider">
+                  <th className="p-4">Timestamp</th>
+                  <th className="p-4">Admin Actor</th>
+                  <th className="p-4">Action & Target</th>
+                  <th className="p-4">Status Transition</th>
+                  <th className="p-4">Reason / Details</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#242f4c]/60 text-slate-300">
+                {auditLogs.length > 0 ? (
+                  auditLogs.map((log) => (
+                    <tr key={log.id} className="hover:bg-[#1f2942]/30 transition-colors">
+                      <td className="p-4 whitespace-nowrap text-slate-400">
+                        <span className="flex items-center gap-1.5">
+                          <Clock className="h-3 w-3 text-slate-500" />
+                          {new Date(log.created_at).toLocaleString()}
+                        </span>
+                      </td>
+                      <td className="p-4 whitespace-nowrap">
+                        <p className="font-bold text-white">{log.admin_name}</p>
+                        <p className="text-[11px] text-slate-500">{log.admin_email}</p>
+                      </td>
+                      <td className="p-4">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 block w-max mb-1">
+                          {log.action_type}
+                        </span>
+                        <span className="text-[11px] text-slate-400">
+                          {log.target_entity_type} {log.target_entity_id ? `#${log.target_entity_id}` : ''}
+                        </span>
+                      </td>
+                      <td className="p-4 whitespace-nowrap">
+                        {(log.previous_status || log.new_status) ? (
+                          <div className="flex items-center gap-1.5 text-xs font-semibold">
+                            <span className="px-1.5 py-0.5 rounded bg-[#0d111c] text-slate-400 border border-slate-800 text-[10px]">
+                              {log.previous_status || 'INIT'}
+                            </span>
+                            <ArrowRight className="h-3 w-3 text-slate-600" />
+                            <span className="px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 text-[10px]">
+                              {log.new_status}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-slate-500">-</span>
+                        )}
+                      </td>
+                      <td className="p-4 max-w-sm">
+                        <p className="text-slate-200 text-xs break-words">{log.reason || '-'}</p>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="p-8 text-center text-slate-500">
+                      {loadingAuditLogs ? 'Loading audit records...' : 'No audit entries match the filters.'}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Admin Reputation Inspection Modal */}
       {selectedReputationUser && (
         <TrustBreakdownModal
@@ -1171,6 +1107,17 @@ export default function AdminDashboard() {
           userName={selectedReputationUser.name}
           onClose={() => setSelectedReputationUser(null)}
           isAdmin={true}
+        />
+      )}
+
+      {/* Entity Moderation History Modal (M23) */}
+      {selectedHistoryEntity && (
+        <ModerationHistoryModal
+          isOpen={Boolean(selectedHistoryEntity)}
+          onClose={() => setSelectedHistoryEntity(null)}
+          entityType={selectedHistoryEntity.type}
+          entityId={selectedHistoryEntity.id}
+          entityTitle={selectedHistoryEntity.title}
         />
       )}
     </div>

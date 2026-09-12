@@ -10,7 +10,12 @@ const {
   updateReportStatus,
   getAdminUserReputation,
   triggerAutoArchive,
-  getExpiredResources
+  getExpiredResources,
+  getAuditLogs,
+  getUserModerationHistory,
+  getResourceModerationHistory,
+  getResourceReports,
+  getReportDetails
 } = require('../controllers/adminController');
 const { protect } = require('../middleware/authMiddleware');
 const { requireAdmin } = require('../middleware/adminMiddleware');
@@ -26,16 +31,24 @@ router.get('/analytics', getStats);
 // User Management & Reputation Inspection
 router.get('/users', getUsers);
 router.get('/users/:id/reputation', getAdminUserReputation);
+router.get('/users/:id/moderation-history', getUserModerationHistory);
 router.patch('/users/:id/status', updateUserStatus);
 
-// Resource Moderation & Lifecycle (M22)
+// Resource Moderation & Lifecycle (M22/M23)
 router.get('/resources', getResources);
 router.get('/resources/expired', getExpiredResources);
+router.get('/resources/:id/reports', getResourceReports);
+router.get('/resources/:id/moderation-history', getResourceModerationHistory);
 router.post('/resources/auto-archive', triggerAutoArchive);
 router.patch('/resources/:id/status', updateResourceStatus);
 
-// Report Management
+// Report Management & Investigation (M23)
 router.get('/reports', getReports);
+router.get('/reports/:id', getReportDetails);
 router.patch('/reports/:id/status', updateReportStatus);
+
+// Admin Audit Trail (M23)
+router.get('/audit-logs', getAuditLogs);
+router.get('/moderation/history', getAuditLogs);
 
 module.exports = router;
