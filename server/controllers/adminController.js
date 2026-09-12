@@ -2,40 +2,14 @@ const db = require('../config/database');
 const { createNotification } = require('../services/notificationService');
 const reputationService = require('../services/reputationService');
 
-/**
- * 1. Platform Statistics
- * GET /api/admin/stats
- */
-const getStats = async (req, res) => {
-  try {
-    const [[usersCount]] = await db.query('SELECT COUNT(*) AS total FROM users');
-    const [[activeUsersCount]] = await db.query("SELECT COUNT(*) AS total FROM users WHERE status = 'ACTIVE'");
-    const [[resourcesCount]] = await db.query('SELECT COUNT(*) AS total FROM resources');
-    const [[availResourcesCount]] = await db.query("SELECT COUNT(*) AS total FROM resources WHERE status = 'AVAILABLE'");
-    const [[requestsCount]] = await db.query('SELECT COUNT(*) AS total FROM exchange_requests');
-    const [[completedExchangesCount]] = await db.query("SELECT COUNT(*) AS total FROM exchange_requests WHERE status = 'COMPLETED'");
-    const [[pendingReportsCount]] = await db.query("SELECT COUNT(*) AS total FROM reports WHERE status = 'PENDING'");
+const { getAdminAnalytics } = require('./analyticsController');
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        total_users: usersCount.total,
-        active_users: activeUsersCount.total,
-        total_resources: resourcesCount.total,
-        available_resources: availResourcesCount.total,
-        total_exchange_requests: requestsCount.total,
-        completed_exchanges: completedExchangesCount.total,
-        pending_reports: pendingReportsCount.total
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching admin statistics:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Internal server error while fetching statistics.'
-    });
-  }
-};
+/**
+ * 1. Platform Statistics & Analytics
+ * GET /api/admin/stats
+ * GET /api/admin/analytics
+ */
+const getStats = getAdminAnalytics;
 
 /**
  * 2. User Management: Get Users

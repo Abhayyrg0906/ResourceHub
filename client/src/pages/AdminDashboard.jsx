@@ -19,7 +19,13 @@ import {
   UserCheck,
   UserX,
   ExternalLink,
-  MessageSquare
+  MessageSquare,
+  BarChart3,
+  QrCode,
+  Star,
+  Bell,
+  TrendingUp,
+  Activity
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -246,9 +252,9 @@ export default function AdminDashboard() {
   }
 
   const statCards = [
-    { label: 'Total Users', value: stats?.total_users ?? '-', sub: `${stats?.active_users ?? '-'} Active`, icon: Users, color: 'text-indigo-400', bg: 'bg-indigo-500/10 border-indigo-500/20' },
+    { label: 'Total Users', value: stats?.total_users ?? '-', sub: `${stats?.active_users ?? '-'} Active • ${stats?.suspended_users ?? 0} Suspended`, icon: Users, color: 'text-indigo-400', bg: 'bg-indigo-500/10 border-indigo-500/20' },
     { label: 'Total Listings', value: stats?.total_resources ?? '-', sub: `${stats?.available_resources ?? '-'} Available`, icon: BookOpen, color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
-    { label: 'Exchanges', value: stats?.total_exchange_requests ?? '-', sub: `${stats?.completed_exchanges ?? '-'} Completed`, icon: ArrowRightLeft, color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/20' },
+    { label: 'Completion Rate', value: stats?.completion_rate !== undefined ? `${stats.completion_rate}%` : '-', sub: `${stats?.completed_exchanges ?? '-'} of ${stats?.total_exchange_requests ?? '-'} Trades`, icon: ArrowRightLeft, color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/20' },
     { label: 'Pending Reports', value: stats?.pending_reports ?? '-', sub: 'Needs Review', icon: Flag, color: 'text-rose-400', bg: 'bg-rose-500/10 border-rose-500/20' },
   ];
 
@@ -322,6 +328,17 @@ export default function AdminDashboard() {
       {/* Tabs Navigation */}
       <div className="flex items-center gap-2 border-b border-[#242f4c] pb-3 overflow-x-auto">
         <button
+          onClick={() => setActiveTab('ANALYTICS')}
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            activeTab === 'ANALYTICS'
+              ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/25'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-[#161d30]'
+          }`}
+        >
+          <BarChart3 className="h-4 w-4" />
+          <span>Platform Analytics</span>
+        </button>
+        <button
           onClick={() => setActiveTab('USERS')}
           className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
             activeTab === 'USERS'
@@ -360,6 +377,341 @@ export default function AdminDashboard() {
           )}
         </button>
       </div>
+
+      {/* ========================================================= */}
+      {/* TAB 0: PLATFORM ANALYTICS                                 */}
+      {/* ========================================================= */}
+      {activeTab === 'ANALYTICS' && (
+        <div className="space-y-6">
+          {/* Row 1: User Health & Exchange Performance */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            {/* User Community Health */}
+            <div className="bg-[#161d30]/60 border border-[#242f4c] rounded-3xl p-6 shadow-xl space-y-5">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-white text-base flex items-center gap-2">
+                  <Users className="h-5 w-5 text-indigo-400" />
+                  <span>Campus User Community</span>
+                </h3>
+                <span className="text-xs font-bold text-slate-400">Total: {stats?.users?.total ?? stats?.total_users ?? 0}</span>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-slate-300 font-medium">Active Accounts</span>
+                    <span className="text-emerald-400 font-bold">{stats?.users?.active ?? stats?.active_users ?? 0}</span>
+                  </div>
+                  <div className="w-full bg-[#0d111c] h-2 rounded-full overflow-hidden border border-[#242f4c]">
+                    <div 
+                      className="bg-emerald-500 h-full rounded-full" 
+                      style={{ width: `${stats?.total_users ? ((stats.active_users / stats.total_users) * 100) : 0}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-slate-300 font-medium">Suspended Accounts</span>
+                    <span className="text-rose-400 font-bold">{stats?.users?.suspended ?? stats?.suspended_users ?? 0}</span>
+                  </div>
+                  <div className="w-full bg-[#0d111c] h-2 rounded-full overflow-hidden border border-[#242f4c]">
+                    <div 
+                      className="bg-rose-500 h-full rounded-full" 
+                      style={{ width: `${stats?.total_users ? (((stats.suspended_users || 0) / stats.total_users) * 100) : 0}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-slate-300 font-medium">Pending Verification</span>
+                    <span className="text-amber-400 font-bold">{stats?.users?.pending_verification ?? stats?.pending_verification_users ?? 0}</span>
+                  </div>
+                  <div className="w-full bg-[#0d111c] h-2 rounded-full overflow-hidden border border-[#242f4c]">
+                    <div 
+                      className="bg-amber-500 h-full rounded-full" 
+                      style={{ width: `${stats?.total_users ? (((stats.pending_verification_users || 0) / stats.total_users) * 100) : 0}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-[#242f4c]/60 grid grid-cols-2 gap-3 text-center text-xs">
+                <div className="p-3 bg-[#0d111c]/60 rounded-xl border border-[#242f4c]">
+                  <p className="text-slate-400 font-medium">Students</p>
+                  <p className="text-lg font-bold text-white mt-0.5">{stats?.users?.students ?? '-'}</p>
+                </div>
+                <div className="p-3 bg-[#0d111c]/60 rounded-xl border border-[#242f4c]">
+                  <p className="text-slate-400 font-medium">Administrators</p>
+                  <p className="text-lg font-bold text-pink-400 mt-0.5">{stats?.users?.admins ?? '-'}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Exchange Lifecycle & Completion Rate */}
+            <div className="bg-[#161d30]/60 border border-[#242f4c] rounded-3xl p-6 shadow-xl space-y-5">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-white text-base flex items-center gap-2">
+                  <ArrowRightLeft className="h-5 w-5 text-purple-400" />
+                  <span>Exchange Fulfillment & Completion</span>
+                </h3>
+                <span className="text-xs font-bold text-purple-300">
+                  {stats?.completion_rate !== undefined ? `${stats.completion_rate}%` : '100%'} Completion
+                </span>
+              </div>
+
+              <div>
+                <div className="flex justify-between items-baseline mb-2">
+                  <span className="text-xs text-slate-400 font-medium">Completed vs Cancelled Rate</span>
+                  <span className="text-sm font-extrabold text-purple-400">{stats?.completion_rate ?? 100}%</span>
+                </div>
+                <div className="w-full bg-[#0d111c] rounded-full h-3 overflow-hidden border border-[#242f4c]">
+                  <div 
+                    className="bg-gradient-to-r from-purple-500 to-indigo-500 h-full rounded-full transition-all duration-500"
+                    style={{ width: `${stats?.completion_rate ?? 100}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs pt-2">
+                <div className="p-2.5 bg-[#0d111c]/60 rounded-xl border border-[#242f4c]">
+                  <p className="text-slate-400 text-[11px]">Completed</p>
+                  <p className="text-base font-bold text-emerald-400 mt-0.5">{stats?.exchanges?.completed ?? stats?.completed_exchanges ?? 0}</p>
+                </div>
+                <div className="p-2.5 bg-[#0d111c]/60 rounded-xl border border-[#242f4c]">
+                  <p className="text-slate-400 text-[11px]">Pending</p>
+                  <p className="text-base font-bold text-amber-400 mt-0.5">{stats?.exchanges?.pending ?? 0}</p>
+                </div>
+                <div className="p-2.5 bg-[#0d111c]/60 rounded-xl border border-[#242f4c]">
+                  <p className="text-slate-400 text-[11px]">Accepted</p>
+                  <p className="text-base font-bold text-indigo-400 mt-0.5">{stats?.exchanges?.accepted ?? 0}</p>
+                </div>
+                <div className="p-2.5 bg-[#0d111c]/60 rounded-xl border border-[#242f4c]">
+                  <p className="text-slate-400 text-[11px]">Cancelled</p>
+                  <p className="text-base font-bold text-rose-400 mt-0.5">{stats?.exchanges?.cancelled ?? 0}</p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Row 2: Resources Inventory & QR Handover Metrics */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            {/* Resources Inventory & Types */}
+            <div className="bg-[#161d30]/60 border border-[#242f4c] rounded-3xl p-6 shadow-xl space-y-5">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-white text-base flex items-center gap-2">
+                  <BookOpen className="h-5 w-5 text-emerald-400" />
+                  <span>Marketplace Resource Distribution</span>
+                </h3>
+                <span className="text-xs font-bold text-slate-400">Total: {stats?.resources?.total ?? stats?.total_resources ?? 0}</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="p-3 bg-[#0d111c]/60 rounded-xl border border-[#242f4c]">
+                  <span className="text-slate-400">Available:</span>
+                  <span className="float-right font-bold text-emerald-400">{stats?.resources?.available ?? stats?.available_resources ?? 0}</span>
+                </div>
+                <div className="p-3 bg-[#0d111c]/60 rounded-xl border border-[#242f4c]">
+                  <span className="text-slate-400">Reserved:</span>
+                  <span className="float-right font-bold text-amber-400">{stats?.resources?.reserved ?? 0}</span>
+                </div>
+                <div className="p-3 bg-[#0d111c]/60 rounded-xl border border-[#242f4c]">
+                  <span className="text-slate-400">Exchanged:</span>
+                  <span className="float-right font-bold text-purple-400">{stats?.resources?.exchanged ?? 0}</span>
+                </div>
+                <div className="p-3 bg-[#0d111c]/60 rounded-xl border border-[#242f4c]">
+                  <span className="text-slate-400">Archived:</span>
+                  <span className="float-right font-bold text-slate-500">{stats?.resources?.archived ?? 0}</span>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-[#242f4c]/60">
+                <p className="text-xs text-slate-400 font-semibold mb-2">Exchange Types Breakdown:</p>
+                <div className="grid grid-cols-4 gap-2 text-center text-xs">
+                  <div className="p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-300">
+                    <p className="text-[10px] uppercase font-bold">Sell</p>
+                    <p className="text-sm font-extrabold mt-0.5">{stats?.resources?.exchange_types?.sell ?? 0}</p>
+                  </div>
+                  <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
+                    <p className="text-[10px] uppercase font-bold">Borrow</p>
+                    <p className="text-sm font-extrabold mt-0.5">{stats?.resources?.exchange_types?.borrow ?? 0}</p>
+                  </div>
+                  <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-300">
+                    <p className="text-[10px] uppercase font-bold">Swap</p>
+                    <p className="text-sm font-extrabold mt-0.5">{stats?.resources?.exchange_types?.swap ?? 0}</p>
+                  </div>
+                  <div className="p-2 rounded-lg bg-pink-500/10 border border-pink-500/20 text-pink-300">
+                    <p className="text-[10px] uppercase font-bold">Donate</p>
+                    <p className="text-sm font-extrabold mt-0.5">{stats?.resources?.exchange_types?.donate ?? 0}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* QR Verification Statistics */}
+            <div className="bg-[#161d30]/60 border border-[#242f4c] rounded-3xl p-6 shadow-xl space-y-5">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-white text-base flex items-center gap-2">
+                  <QrCode className="h-5 w-5 text-teal-400" />
+                  <span>QR Physical Handover Performance</span>
+                </h3>
+                <span className="text-xs font-bold text-teal-300">
+                  {stats?.qr_verifications?.verification_rate !== undefined ? `${stats.qr_verifications.verification_rate}%` : '100%'} Verified
+                </span>
+              </div>
+
+              <div>
+                <div className="flex justify-between items-baseline mb-2">
+                  <span className="text-xs text-slate-400 font-medium">Handover Verification Success Rate</span>
+                  <span className="text-sm font-extrabold text-teal-400">
+                    {stats?.qr_verifications?.verification_rate ?? 100}%
+                  </span>
+                </div>
+                <div className="w-full bg-[#0d111c] rounded-full h-3 overflow-hidden border border-[#242f4c]">
+                  <div 
+                    className="bg-gradient-to-r from-teal-500 to-emerald-400 h-full rounded-full transition-all duration-500"
+                    style={{ width: `${stats?.qr_verifications?.verification_rate ?? 100}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3 text-center text-xs pt-2">
+                <div className="p-3 bg-[#0d111c]/60 rounded-xl border border-[#242f4c]">
+                  <p className="text-slate-400">Total Generated</p>
+                  <p className="text-lg font-bold text-white mt-0.5">{stats?.qr_verifications?.total_generated ?? 0}</p>
+                </div>
+                <div className="p-3 bg-[#0d111c]/60 rounded-xl border border-[#242f4c]">
+                  <p className="text-slate-400">Verified</p>
+                  <p className="text-lg font-bold text-teal-400 mt-0.5">{stats?.qr_verifications?.verified ?? 0}</p>
+                </div>
+                <div className="p-3 bg-[#0d111c]/60 rounded-xl border border-[#242f4c]">
+                  <p className="text-slate-400">Expired</p>
+                  <p className="text-lg font-bold text-amber-400 mt-0.5">{stats?.qr_verifications?.expired ?? 0}</p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Row 3: Reviews Sentiment, Moderation & Notifications */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+            {/* Reviews Sentiment */}
+            <div className="bg-[#161d30]/60 border border-[#242f4c] rounded-3xl p-6 shadow-xl space-y-4">
+              <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                <Star className="h-4 w-4 text-amber-400" />
+                <span>Reviews & Community Sentiment</span>
+              </h4>
+
+              <div className="flex items-center gap-3">
+                <p className="text-3xl font-extrabold text-white">{stats?.reviews?.average_rating ?? 0}</p>
+                <div>
+                  <div className="flex items-center text-amber-400 text-xs">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} className="h-3.5 w-3.5 fill-current" />
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-0.5">{stats?.reviews?.total ?? 0} Total Reviews</p>
+                </div>
+              </div>
+
+              <div className="space-y-1.5 pt-2 text-xs">
+                {[5, 4, 3, 2, 1].map((stars) => {
+                  const count = stats?.reviews?.distribution?.[stars] || 0;
+                  const total = stats?.reviews?.total || 1;
+                  const pct = ((count / total) * 100).toFixed(0);
+                  return (
+                    <div key={stars} className="flex items-center gap-2 text-slate-400 text-[11px]">
+                      <span className="w-3">{stars}★</span>
+                      <div className="flex-1 bg-[#0d111c] h-1.5 rounded-full overflow-hidden">
+                        <div className="bg-amber-400 h-full rounded-full" style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="w-6 text-right font-medium">{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Moderation & Reports Pipeline */}
+            <div className="bg-[#161d30]/60 border border-[#242f4c] rounded-3xl p-6 shadow-xl space-y-4">
+              <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                <Flag className="h-4 w-4 text-rose-400" />
+                <span>Moderation Pipeline</span>
+              </h4>
+
+              <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] text-rose-300 font-semibold uppercase">Pending Action</p>
+                  <p className="text-2xl font-extrabold text-rose-400">{stats?.reports?.pending ?? stats?.pending_reports ?? 0}</p>
+                </div>
+                <button
+                  onClick={() => setActiveTab('REPORTS')}
+                  className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all"
+                >
+                  Open Queue
+                </button>
+              </div>
+
+              <div className="space-y-2 text-xs text-slate-300">
+                <div className="flex justify-between py-1 border-b border-[#242f4c]/60">
+                  <span className="text-slate-400">Total Reports:</span>
+                  <span className="font-bold">{stats?.reports?.total ?? 0}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-[#242f4c]/60">
+                  <span className="text-slate-400">Resolved:</span>
+                  <span className="font-bold text-emerald-400">{stats?.reports?.resolved ?? 0}</span>
+                </div>
+                <div className="flex justify-between py-1">
+                  <span className="text-slate-400">Dismissed:</span>
+                  <span className="font-bold text-slate-500">{stats?.reports?.dismissed ?? 0}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Notification Activity */}
+            <div className="bg-[#161d30]/60 border border-[#242f4c] rounded-3xl p-6 shadow-xl space-y-4">
+              <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                <Bell className="h-4 w-4 text-indigo-400" />
+                <span>Notification System Activity</span>
+              </h4>
+
+              <div className="grid grid-cols-2 gap-2 text-center text-xs">
+                <div className="p-3 bg-[#0d111c]/60 rounded-xl border border-[#242f4c]">
+                  <p className="text-slate-400 text-[11px]">Total Dispatched</p>
+                  <p className="text-lg font-bold text-white mt-0.5">{stats?.notifications?.total ?? 0}</p>
+                </div>
+                <div className="p-3 bg-[#0d111c]/60 rounded-xl border border-[#242f4c]">
+                  <p className="text-slate-400 text-[11px]">Unread Alert Ratio</p>
+                  <p className="text-lg font-bold text-indigo-400 mt-0.5">
+                    {stats?.notifications?.total ? `${(((stats.notifications.unread || 0) / stats.notifications.total) * 100).toFixed(0)}%` : '0%'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-1">
+                <p className="text-[11px] text-slate-400 font-semibold mb-2">Top Notification Channels:</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {stats?.notifications?.by_type?.length > 0 ? (
+                    stats.notifications.by_type.map((t, idx) => (
+                      <span key={idx} className="text-[10px] px-2 py-0.5 rounded-full bg-[#0d111c] border border-[#242f4c] text-slate-300">
+                        {t.notification_type}: <b className="text-indigo-300">{t.count}</b>
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-[11px] text-slate-500">No dispatch data</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      )}
 
       {/* ========================================================= */}
       {/* TAB 1: USER MANAGEMENT                                    */}

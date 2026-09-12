@@ -17,8 +17,9 @@ const { requireAdmin } = require('../middleware/adminMiddleware');
 router.use(protect);
 router.use(requireAdmin);
 
-// Dashboard Statistics
+// Dashboard Statistics & Analytics
 router.get('/stats', getStats);
+router.get('/analytics', getStats);
 
 // User Management & Reputation Inspection
 router.get('/users', getUsers);

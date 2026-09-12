@@ -2,6 +2,7 @@ const http = require('http');
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
+const db = require('./config/database');
 
 const healthRouter = require('./routes/health');
 const authRouter = require('./routes/auth');
@@ -14,6 +15,7 @@ const adminRouter = require('./routes/admin');
 const chatRouter = require('./routes/chat');
 const wishlistRouter = require('./routes/wishlist');
 const usersRouter = require('./routes/users');
+const analyticsRouter = require('./routes/analytics');
 const { initSocket } = require('./socket');
 const path = require('path');
 const { ensureUploadDir } = require('./services/imageService');
@@ -46,6 +48,7 @@ app.use('/api/chat', chatRouter);
 app.use('/api/wishlist', wishlistRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/profile', usersRouter);
+app.use('/api/analytics', analyticsRouter);
 
 // Fallback Route for Undefined Paths (404 Handler)
 app.use((req, res, next) => {
