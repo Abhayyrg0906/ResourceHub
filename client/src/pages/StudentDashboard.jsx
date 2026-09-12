@@ -23,6 +23,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { getStudentAnalytics } from '../services/analyticsService';
 import TrustBreakdownModal from '../components/TrustBreakdownModal';
+import RecommendationsSection from '../components/RecommendationsSection';
 
 export default function StudentDashboard() {
   const { user } = useAuth();
@@ -543,6 +544,15 @@ export default function StudentDashboard() {
         </div>
 
       </div>
+
+      {/* Personalized Recommendations Section (M20) */}
+      <RecommendationsSection
+        title="✨ Recommended for Your Academic Term"
+        subtitle="Curated listings based on your study wishlist, exchange preferences, and campus activity"
+        type="personalized"
+        limit={3}
+        className="mt-8"
+      />
 
       {/* Trust & Reputation Breakdown Modal */}
       {showTrustModal && (

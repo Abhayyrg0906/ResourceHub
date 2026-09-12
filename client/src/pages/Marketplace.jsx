@@ -18,6 +18,7 @@ import {
 import { getCategories, getResources } from '../services/resourceService';
 import wishlistService from '../services/wishlistService';
 import { useAuth } from '../context/AuthContext';
+import RecommendationsSection from '../components/RecommendationsSection';
 
 export default function Marketplace() {
   const [resources, setResources] = useState([]);
@@ -555,6 +556,17 @@ export default function Marketplace() {
           <AlertTriangle className="h-4 w-4 flex-shrink-0" />
           <span>{error}</span>
         </div>
+      )}
+
+      {/* Recommended for You Section (M20) */}
+      {currentPage === 1 && !debouncedSearch && selectedCategory === 'All' && selectedType === 'All' && (
+        <RecommendationsSection 
+          title="✨ Recommended for You"
+          subtitle="Smart explainable recommendations based on your wishlist, trades, and campus activity"
+          type="personalized"
+          limit={3}
+          className="mb-8"
+        />
       )}
 
       {/* Results Count & Meta */}

@@ -16,6 +16,7 @@ const chatRouter = require('./routes/chat');
 const wishlistRouter = require('./routes/wishlist');
 const usersRouter = require('./routes/users');
 const analyticsRouter = require('./routes/analytics');
+const recommendationsRouter = require('./routes/recommendations');
 const { initSocket } = require('./socket');
 const path = require('path');
 const { ensureUploadDir } = require('./services/imageService');
@@ -49,6 +50,7 @@ app.use('/api/wishlist', wishlistRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/profile', usersRouter);
 app.use('/api/analytics', analyticsRouter);
+app.use('/api/recommendations', recommendationsRouter);
 
 // Fallback Route for Undefined Paths (404 Handler)
 app.use((req, res, next) => {

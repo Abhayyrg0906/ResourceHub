@@ -73,6 +73,37 @@ const protect = async (req, res, next) => {
   }
 };
 
+const optionalAuth = async (req, res, next) => {
+  let token;
+  const jwtSecret = process.env.JWT_SECRET || 'supersecretkey12345_change_me_in_production';
+
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer')) {
+    token = authHeader.split(' ')[1];
+  }
+
+  if (!token) {
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(token, jwtSecret);
+    const [rows] = await db.query(
+      'SELECT id, name, email, role, status, department, year_of_study, trust_score, profile_photo_url, phone_number, bio FROM users WHERE id = ?',
+      [decoded.userId]
+    );
+
+    if (rows && rows.length > 0 && rows[0].status !== 'SUSPENDED') {
+      req.user = rows[0];
+    }
+  } catch (error) {
+    // Graceful fallback to guest on invalid/expired token
+    req.user = null;
+  }
+
+  next();
+};
+
 const requireRole = (...allowedRoles) => {
   return (req, res, next) => {
     if (!req.user) {
@@ -95,5 +126,8 @@ const requireRole = (...allowedRoles) => {
 
 module.exports = {
   protect,
+  optionalAuth,
   requireRole
 };
+
+

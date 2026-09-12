@@ -11,12 +11,15 @@ const {
   setPrimaryResourceImage,
   deleteResourceImage
 } = require('../controllers/resourceController');
-const { protect } = require('../middleware/authMiddleware');
+const { getSimilarResources } = require('../controllers/recommendationController');
+const { protect, optionalAuth } = require('../middleware/authMiddleware');
 const { handleImageUpload } = require('../middleware/imageUploadMiddleware');
 
 // Public endpoints
 router.get('/', getResources);
+router.get('/:id/similar', optionalAuth, getSimilarResources);
 router.get('/:id', getResourceById);
+
 
 // Protected image upload and listing endpoints
 router.post('/upload', protect, handleImageUpload, uploadResourceImages);

@@ -27,6 +27,7 @@ import chatService from '../services/chatService';
 import wishlistService from '../services/wishlistService';
 import { useAuth } from '../context/AuthContext';
 import TrustBreakdownModal from '../components/TrustBreakdownModal';
+import RecommendationsSection from '../components/RecommendationsSection';
 
 export default function ResourceDetails() {
   const { id } = useParams();
@@ -515,6 +516,16 @@ export default function ResourceDetails() {
           </div>
 
         </div>
+
+        {/* Similar Resources Section (M20) */}
+        <RecommendationsSection
+          title="✨ Similar Resources on Campus"
+          subtitle={`Other available items related to ${resource.title}`}
+          type="similar"
+          resourceId={resource.id}
+          limit={3}
+          className="mt-12"
+        />
 
       </div>
 
