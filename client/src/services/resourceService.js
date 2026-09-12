@@ -25,6 +25,21 @@ export const archiveResource = async (id) => {
   return response.data;
 };
 
+export const renewResource = async (id) => {
+  const response = await api.post(`/resources/${id}/renew`);
+  return response.data;
+};
+
+export const triggerAutoArchive = async (payload = {}) => {
+  const response = await api.post('/resources/auto-archive', payload);
+  return response.data;
+};
+
+export const getExpiredResourcesPreview = async (params) => {
+  const response = await api.get('/resources/expiry/preview', { params });
+  return response.data;
+};
+
 export const getCategories = async () => {
   const response = await api.get('/categories');
   return response.data;
@@ -53,4 +68,3 @@ export const deleteResourceImage = async (resourceId, imageId) => {
   const response = await api.delete(`/resources/${resourceId}/images/${imageId}`);
   return response.data;
 };
-

@@ -124,10 +124,13 @@ const requireRole = (...allowedRoles) => {
   };
 };
 
+const requireAdmin = requireRole('ADMIN');
+
 module.exports = {
   protect,
   optionalAuth,
-  requireRole
+  requireRole,
+  requireAdmin
 };
 
 

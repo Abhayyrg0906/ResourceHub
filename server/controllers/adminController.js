@@ -1,6 +1,7 @@
 const db = require('../config/database');
 const { createNotification } = require('../services/notificationService');
 const reputationService = require('../services/reputationService');
+const expiryService = require('../services/expiryService');
 
 const { getAdminAnalytics } = require('./analyticsController');
 
@@ -555,6 +556,59 @@ const getAdminUserReputation = async (req, res) => {
   }
 };
 
+/**
+ * 9. Trigger Resource Auto-Archival Scan (M22)
+ * POST /api/admin/resources/auto-archive
+ */
+const triggerAutoArchive = async (req, res) => {
+  try {
+    const { expiry_days, limit } = req.body || {};
+    const result = await expiryService.archiveExpiredResources({
+      expiryDays: expiry_days || req.query.expiry_days,
+      limit: limit || req.query.limit
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Auto-archival complete. ${result.archived_count} listing(s) archived out of ${result.scanned} scanned.`,
+      data: result
+    });
+  } catch (error) {
+    console.error('Error executing admin auto-archival:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error during auto-archival.'
+    });
+  }
+};
+
+/**
+ * 10. Get Expired Resources List / Candidates (M22)
+ * GET /api/admin/resources/expired
+ */
+const getExpiredResources = async (req, res) => {
+  try {
+    const { expiry_days, limit } = req.query;
+    const candidates = await expiryService.findExpiredResources({
+      expiryDays: expiry_days,
+      limit
+    });
+
+    return res.status(200).json({
+      success: true,
+      count: candidates.length,
+      expiry_days: expiryService.getExpiryDays(expiry_days),
+      data: candidates
+    });
+  } catch (error) {
+    console.error('Error fetching admin expired resources:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error while fetching expired resources.'
+    });
+  }
+};
+
 module.exports = {
   getStats,
   getUsers,
@@ -563,5 +617,7 @@ module.exports = {
   updateResourceStatus,
   getReports,
   updateReportStatus,
-  getAdminUserReputation
+  getAdminUserReputation,
+  triggerAutoArchive,
+  getExpiredResources
 };

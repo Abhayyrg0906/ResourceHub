@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Trash2, Edit2, CheckSquare, ArrowRight, Image } from 'lucide-react';
-import { getResources, archiveResource, updateResource } from '../services/resourceService';
+import { Trash2, Edit2, CheckSquare, ArrowRight, Image, RotateCw, Clock, Archive } from 'lucide-react';
+import { getResources, archiveResource, updateResource, renewResource } from '../services/resourceService';
 import { useAuth } from '../context/AuthContext';
 
 export default function MyListings() {
@@ -9,6 +9,7 @@ export default function MyListings() {
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('All');
+  const [renewingId, setRenewingId] = useState(null);
 
   // Load listings on mount or user change
   useEffect(() => {
@@ -17,7 +18,7 @@ export default function MyListings() {
       try {
         const res = await getResources({
           owner_id: user.id,
-          status: 'ALL'
+          status: 'ALL_INCLUSIVE'
         });
         if (res.success) {
           setListings(res.data);
@@ -37,12 +38,32 @@ export default function MyListings() {
       try {
         const res = await archiveResource(id);
         if (res.success) {
-          setListings(prev => prev.filter(item => item.id !== id));
+          setListings(prev => prev.map(item => item.id === id ? { ...item, status: 'ARCHIVED' } : item));
           alert('Resource archived successfully.');
         }
       } catch (err) {
-        alert(err.response?.data?.message || 'Failed to delete listing.');
+        alert(err.response?.data?.message || 'Failed to archive listing.');
       }
+    }
+  };
+
+  const handleRenew = async (item) => {
+    setRenewingId(item.id);
+    try {
+      const res = await renewResource(item.id);
+      if (res.success) {
+        setListings(prev => prev.map(l => {
+          if (l.id === item.id) {
+            return { ...l, status: 'AVAILABLE', updated_at: new Date().toISOString() };
+          }
+          return l;
+        }));
+        alert(res.message || 'Resource listing renewed successfully!');
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to renew listing.');
+    } finally {
+      setRenewingId(null);
     }
   };
 
@@ -79,6 +100,7 @@ export default function MyListings() {
     if (filter === 'All') return true;
     if (filter === 'Active') return item.status === 'AVAILABLE' || item.status === 'RESERVED';
     if (filter === 'Traded') return item.status === 'EXCHANGED';
+    if (filter === 'Archived / Expired') return item.status === 'ARCHIVED';
     return true;
   });
 
@@ -95,7 +117,7 @@ export default function MyListings() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-white tracking-tight">My Resource Listings</h1>
-          <p className="text-sm text-slate-400 mt-1">Manage and track items you have made available for the campus community.</p>
+          <p className="text-sm text-slate-400 mt-1">Manage, renew, and track items you have made available for the campus community.</p>
         </div>
         <Link 
           to="/exchange-requests"
@@ -107,12 +129,12 @@ export default function MyListings() {
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex items-center space-x-2 border-b border-[#242f4c] pb-px">
-        {['All', 'Active', 'Traded'].map(tab => (
+      <div className="flex items-center space-x-2 border-b border-[#242f4c] pb-px overflow-x-auto">
+        {['All', 'Active', 'Traded', 'Archived / Expired'].map(tab => (
           <button
             key={tab}
             onClick={() => setFilter(tab)}
-            className={`text-sm px-4 py-2 border-b-2 font-semibold transition-all duration-200 -mb-px ${
+            className={`text-sm px-4 py-2 border-b-2 font-semibold transition-all duration-200 -mb-px whitespace-nowrap cursor-pointer ${
               filter === tab
                 ? 'border-indigo-500 text-indigo-400 bg-indigo-500/5'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -150,7 +172,15 @@ export default function MyListings() {
                             <Image className="h-4 w-4" />
                           )}
                         </div>
-                        <span className="font-semibold text-slate-200 block truncate max-w-[200px]">{item.title}</span>
+                        <div>
+                          <span className="font-semibold text-slate-200 block truncate max-w-[200px]">{item.title}</span>
+                          {item.updated_at && (
+                            <span className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+                              <Clock className="h-3 w-3" />
+                              {new Date(item.updated_at).toLocaleDateString()}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="p-4 sm:p-5 text-slate-400">{item.category}</td>
@@ -168,19 +198,39 @@ export default function MyListings() {
                           ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
                           : item.status === 'RESERVED'
                           ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                          : item.status === 'ARCHIVED'
+                          ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
                           : 'bg-slate-500/10 text-slate-400 border border-slate-700'
                       }`}>
-                        {item.status}
+                        {item.status === 'ARCHIVED' ? 'ARCHIVED / EXPIRED' : item.status}
                       </span>
                     </td>
-                    <td className="p-4 sm:p-5 text-right space-x-2">
+                    <td className="p-4 sm:p-5 text-right space-x-2 whitespace-nowrap">
+                      {/* Renew / Reactivate button */}
                       <button
-                        onClick={() => handleToggleExchanged(item)}
-                        title={item.status === 'AVAILABLE' ? 'Mark as Exchanged' : 'Mark as Available'}
-                        className="p-1.5 rounded-lg border border-slate-700/80 bg-slate-800/80 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                        onClick={() => handleRenew(item)}
+                        disabled={renewingId === item.id || item.status === 'EXCHANGED'}
+                        title={item.status === 'ARCHIVED' ? 'Reactivate & Renew Listing' : 'Renew Listing (Reset Expiry Timer)'}
+                        className={`p-1.5 rounded-lg border transition-colors cursor-pointer inline-flex items-center gap-1 ${
+                          item.status === 'ARCHIVED'
+                            ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
+                            : 'border-slate-700/80 bg-slate-800/80 text-emerald-400 hover:text-emerald-300'
+                        } ${renewingId === item.id ? 'opacity-50 cursor-wait' : ''}`}
                       >
-                        <CheckSquare className="h-4 w-4" />
+                        <RotateCw className={`h-4 w-4 ${renewingId === item.id ? 'animate-spin' : ''}`} />
+                        {item.status === 'ARCHIVED' && <span className="text-xs font-semibold pr-1">Renew</span>}
                       </button>
+
+                      {item.status !== 'ARCHIVED' && (
+                        <button
+                          onClick={() => handleToggleExchanged(item)}
+                          title={item.status === 'AVAILABLE' ? 'Mark as Exchanged' : 'Mark as Available'}
+                          className="p-1.5 rounded-lg border border-slate-700/80 bg-slate-800/80 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                        >
+                          <CheckSquare className="h-4 w-4" />
+                        </button>
+                      )}
+
                       <Link
                         to={`/resources/${item.id}/edit`}
                         title="Edit Listing"
@@ -188,13 +238,16 @@ export default function MyListings() {
                       >
                         <Edit2 className="h-4 w-4" />
                       </Link>
-                      <button
-                        onClick={() => handleDelete(item.id)}
-                        title="Delete Listing"
-                        className="p-1.5 rounded-lg border border-slate-700/80 bg-[#1f1922] text-rose-400 hover:text-rose-300 transition-colors cursor-pointer"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+
+                      {item.status !== 'ARCHIVED' && (
+                        <button
+                          onClick={() => handleDelete(item.id)}
+                          title="Archive Listing"
+                          className="p-1.5 rounded-lg border border-slate-700/80 bg-[#1f1922] text-rose-400 hover:text-rose-300 transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

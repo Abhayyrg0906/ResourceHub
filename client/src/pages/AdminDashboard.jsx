@@ -37,6 +37,7 @@ import {
   getAdminReports, 
   updateReportStatus 
 } from '../services/adminService';
+import { triggerAutoArchive } from '../services/resourceService';
 import TrustBreakdownModal from '../components/TrustBreakdownModal';
 
 export default function AdminDashboard() {
@@ -63,6 +64,7 @@ export default function AdminDashboard() {
   const [resourceSearch, setResourceSearch] = useState('');
   const [resourceStatusFilter, setResourceStatusFilter] = useState('');
   const [resourceActionLoading, setResourceActionLoading] = useState(null);
+  const [autoArchiving, setAutoArchiving] = useState(false);
 
   // Reports State
   const [reports, setReports] = useState([]);
@@ -206,6 +208,24 @@ export default function AdminDashboard() {
       showNotification(err.response?.data?.message || 'Failed to archive resource.', true);
     } finally {
       setResourceActionLoading(null);
+    }
+  };
+
+  // Handle Trigger Auto-Archival Scan (M22)
+  const handleTriggerAutoArchive = async () => {
+    try {
+      setAutoArchiving(true);
+      const res = await triggerAutoArchive();
+      if (res && res.success) {
+        showNotification(res.message || 'Auto-archival process completed.');
+        fetchResources();
+        fetchStats();
+      }
+    } catch (err) {
+      console.error('Error triggering auto-archival:', err);
+      showNotification(err.response?.data?.message || 'Failed to execute auto-archival scan.', true);
+    } finally {
+      setAutoArchiving(false);
     }
   };
 
@@ -902,8 +922,19 @@ export default function AdminDashboard() {
               <button
                 onClick={fetchResources}
                 className="p-2 rounded-xl bg-[#1f2942] hover:bg-[#283556] text-slate-300 hover:text-white border border-[#2d3a5d] transition-colors"
+                title="Refresh resource list"
               >
                 <RefreshCw className={`h-4 w-4 ${loadingResources ? 'animate-spin' : ''}`} />
+              </button>
+
+              <button
+                onClick={handleTriggerAutoArchive}
+                disabled={autoArchiving}
+                className="px-3 py-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/40 text-xs font-semibold transition-all inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                title="Scan and auto-archive inactive listings"
+              >
+                <Clock className={`h-3.5 w-3.5 ${autoArchiving ? 'animate-spin' : ''}`} />
+                <span>{autoArchiving ? 'Archiving...' : 'Auto-Archive Inactive'}</span>
               </button>
             </div>
           </div>

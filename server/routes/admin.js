@@ -8,7 +8,9 @@ const {
   updateResourceStatus,
   getReports,
   updateReportStatus,
-  getAdminUserReputation
+  getAdminUserReputation,
+  triggerAutoArchive,
+  getExpiredResources
 } = require('../controllers/adminController');
 const { protect } = require('../middleware/authMiddleware');
 const { requireAdmin } = require('../middleware/adminMiddleware');
@@ -26,8 +28,10 @@ router.get('/users', getUsers);
 router.get('/users/:id/reputation', getAdminUserReputation);
 router.patch('/users/:id/status', updateUserStatus);
 
-// Resource Moderation
+// Resource Moderation & Lifecycle (M22)
 router.get('/resources', getResources);
+router.get('/resources/expired', getExpiredResources);
+router.post('/resources/auto-archive', triggerAutoArchive);
 router.patch('/resources/:id/status', updateResourceStatus);
 
 // Report Management

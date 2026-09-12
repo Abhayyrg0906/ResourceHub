@@ -1,6 +1,7 @@
 const db = require('../config/database');
 const { notifyWishlistAvailability, notifyWishlistCategoryMatch } = require('../services/notificationService');
 const { processAndSaveImages, deleteImageFile } = require('../services/imageService');
+const expiryService = require('../services/expiryService');
 
 // 1. Get Categories
 const getCategories = async (req, res) => {
@@ -213,12 +214,14 @@ const getResources = async (req, res) => {
     const whereClauses = [];
     const queryParams = [];
 
-    // Filter status: if empty, defaults to AVAILABLE. If status = ALL, fetches everything except ARCHIVED.
+    // Filter status: if empty, defaults to AVAILABLE. If status = ALL, fetches everything except ARCHIVED. If ALL_INCLUSIVE, fetches all.
     if (status) {
       if (status.toUpperCase() === 'ALL') {
         whereClauses.push("r.status != 'ARCHIVED'");
+      } else if (status.toUpperCase() === 'ALL_INCLUSIVE') {
+        // No status filter applied
       } else {
-        const validStatuses = ['AVAILABLE', 'RESERVED', 'EXCHANGED'];
+        const validStatuses = ['AVAILABLE', 'RESERVED', 'EXCHANGED', 'ARCHIVED'];
         if (validStatuses.includes(status.toUpperCase())) {
           whereClauses.push('r.status = ?');
           queryParams.push(status.toUpperCase());
@@ -977,6 +980,74 @@ const deleteResourceImage = async (req, res) => {
   }
 };
 
+// 11. Renew Resource (M22)
+const renewResource = async (req, res) => {
+  try {
+    const resourceId = parseInt(req.params.id, 10);
+    const userId = req.user.id;
+
+    const result = await expiryService.renewResource(resourceId, userId);
+    return res.status(result.statusCode).json({
+      success: result.success,
+      message: result.message,
+      data: result.data
+    });
+  } catch (error) {
+    console.error('Error renewing resource:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error while renewing resource.'
+    });
+  }
+};
+
+// 12. Trigger Auto-Archival (M22)
+const triggerAutoArchive = async (req, res) => {
+  try {
+    const { expiry_days, limit } = req.body || {};
+    const result = await expiryService.archiveExpiredResources({
+      expiryDays: expiry_days || req.query.expiry_days,
+      limit: limit || req.query.limit
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Auto-archival complete. ${result.archived_count} listing(s) archived out of ${result.scanned} scanned.`,
+      data: result
+    });
+  } catch (error) {
+    console.error('Error executing auto-archival:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error during auto-archival.'
+    });
+  }
+};
+
+// 13. Preview Expired Resources (M22)
+const getExpiredResourcesPreview = async (req, res) => {
+  try {
+    const { expiry_days, limit } = req.query;
+    const candidates = await expiryService.findExpiredResources({
+      expiryDays: expiry_days,
+      limit
+    });
+
+    return res.status(200).json({
+      success: true,
+      count: candidates.length,
+      expiry_days: expiryService.getExpiryDays(expiry_days),
+      data: candidates
+    });
+  } catch (error) {
+    console.error('Error previewing expired resources:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error while fetching expired candidates.'
+    });
+  }
+};
+
 module.exports = {
   getCategories,
   createResource,
@@ -987,6 +1058,9 @@ module.exports = {
   uploadResourceImages,
   addResourceImage,
   setPrimaryResourceImage,
-  deleteResourceImage
+  deleteResourceImage,
+  renewResource,
+  triggerAutoArchive,
+  getExpiredResourcesPreview
 };
 
