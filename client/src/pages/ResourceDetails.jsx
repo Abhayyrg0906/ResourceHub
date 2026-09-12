@@ -28,6 +28,7 @@ import wishlistService from '../services/wishlistService';
 import { useAuth } from '../context/AuthContext';
 import TrustBreakdownModal from '../components/TrustBreakdownModal';
 import RecommendationsSection from '../components/RecommendationsSection';
+import MeetupLocationCard from '../components/MeetupLocationCard';
 
 export default function ResourceDetails() {
   const { id } = useParams();
@@ -370,16 +371,12 @@ export default function ResourceDetails() {
               <p className="text-sm text-slate-400 leading-relaxed whitespace-pre-wrap">{resource.description}</p>
             </div>
 
-            <div className="border-t border-[#242f4c] pt-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {/* Meetup location */}
-              <div className="flex items-start space-x-3 bg-slate-900/50 p-4 rounded-2xl border border-slate-800">
-                <MapPin className="h-5 w-5 text-indigo-400 mt-0.5 flex-shrink-0" />
-                <div>
-                  <h4 className="text-xs uppercase font-extrabold tracking-wider text-slate-500">Preferred Handover Location</h4>
-                  <p className="text-sm text-slate-300 mt-1 font-semibold">{resource.meetup_location}</p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">Physical meetups must follow campus safety regulations.</p>
-                </div>
-              </div>
+            <div className="border-t border-[#242f4c] pt-6 space-y-4">
+              {/* Meetup location card with map modal */}
+              <MeetupLocationCard
+                meetupLocation={resource.meetup_location}
+                resourceTitle={resource.title}
+              />
 
               {/* Sustainability Info */}
               <div className="flex items-start space-x-3 bg-emerald-950/10 p-4 rounded-2xl border border-emerald-500/10">

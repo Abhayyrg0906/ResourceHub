@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { PlusCircle, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
 import { getCategories, createResource } from '../services/resourceService';
 import ImageUploader from '../components/ImageUploader';
+import CampusLocationPicker from '../components/CampusLocationPicker';
 
 export default function AddResource() {
   const [categories, setCategories] = useState([]);
@@ -201,14 +202,11 @@ export default function AddResource() {
 
             {/* Meetup location */}
             <div className="sm:col-span-2">
-              <label className="block text-sm font-semibold text-slate-300 mb-2">Preferred Handover Location</label>
-              <input
-                type="text"
+              <CampusLocationPicker
                 value={meetupLocation}
-                onChange={(e) => setMeetupLocation(e.target.value)}
-                placeholder="e.g. Library 2nd floor, Student Union lobby"
-                required
-                className="w-full px-4 py-3 bg-[#0d111c]/90 border border-slate-700/60 focus:border-indigo-500/80 rounded-xl text-slate-100 placeholder-slate-500 outline-none transition-all duration-300 text-sm"
+                onChange={setMeetupLocation}
+                required={true}
+                label="Preferred Handover Location"
               />
             </div>
 

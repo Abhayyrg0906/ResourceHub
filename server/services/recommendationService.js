@@ -468,8 +468,13 @@ const getSimilarResources = async (resourceId, userId = null, options = {}) => {
     };
   });
 
-  // Sort descending by similarity score
-  scoredSimilar.sort((a, b) => b.recommendation_metadata.similarity_score - a.recommendation_metadata.similarity_score);
+  // Sort descending by similarity score, tie-break by ID descending (recency)
+  scoredSimilar.sort((a, b) => {
+    if (b.recommendation_metadata.similarity_score !== a.recommendation_metadata.similarity_score) {
+      return b.recommendation_metadata.similarity_score - a.recommendation_metadata.similarity_score;
+    }
+    return b.id - a.id;
+  });
 
   return scoredSimilar.slice(0, limit);
 };

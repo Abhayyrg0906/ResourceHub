@@ -15,7 +15,9 @@ import {
   Camera, 
   Star,
   MessageSquare,
-  History 
+  History,
+  MapPin,
+  Navigation
 } from 'lucide-react';
 import chatService from '../services/chatService';
 import { 
@@ -34,6 +36,8 @@ import { useAuth } from '../context/AuthContext';
 import { QRCodeCanvas } from 'qrcode.react';
 import HandoverQrModal from '../components/HandoverQrModal';
 import QrHistoryModal from '../components/QrHistoryModal';
+import CampusMeetupMapModal from '../components/CampusMeetupMapModal';
+
 
 // ----------------------------------------------------
 // Unified Handover Verification Section (M16 Enhanced QR Handover)
@@ -515,6 +519,7 @@ export default function MyRequests() {
 
   // Reviews list map by transaction_id: { [txId]: Array<Review> }
   const [reviewsMap, setReviewsMap] = useState({});
+  const [mapModalLocation, setMapModalLocation] = useState(null);
 
   const fetchRequests = async () => {
     if (!user) return;
@@ -749,9 +754,22 @@ export default function MyRequests() {
                           </span>
                         </div>
                         <h3 className="font-bold text-slate-200 text-base">{req.resource_title}</h3>
-                        <p className="text-xs text-indigo-300 font-semibold flex items-center space-x-1">
-                          <span>Terms: {renderTerms(req)}</span>
-                        </p>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <p className="text-xs text-indigo-300 font-semibold flex items-center space-x-1">
+                            <span>Terms: {renderTerms(req)}</span>
+                          </p>
+                          {req.resource_meetup_location && (
+                            <button
+                              type="button"
+                              onClick={() => setMapModalLocation({ location: req.resource_meetup_location, title: req.resource_title })}
+                              className="inline-flex items-center gap-1 text-[11px] text-slate-300 hover:text-indigo-300 bg-slate-900/60 hover:bg-slate-800/80 px-2.5 py-0.5 rounded-lg border border-slate-700/60 transition-colors cursor-pointer"
+                            >
+                              <MapPin className="h-3 w-3 text-indigo-400" />
+                              <span>Meetup: <strong>{req.resource_meetup_location}</strong></span>
+                              <span className="text-[10px] text-indigo-400 font-semibold ml-1">(View Map)</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
 
                       <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-between md:justify-end">
@@ -858,7 +876,20 @@ export default function MyRequests() {
                           </span>
                         </div>
                         <h3 className="font-bold text-slate-200 text-base">{req.resource_title}</h3>
-                        <p className="text-xs text-indigo-300 font-semibold">Terms: {renderTerms(req)}</p>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <p className="text-xs text-indigo-300 font-semibold">Terms: {renderTerms(req)}</p>
+                          {req.resource_meetup_location && (
+                            <button
+                              type="button"
+                              onClick={() => setMapModalLocation({ location: req.resource_meetup_location, title: req.resource_title })}
+                              className="inline-flex items-center gap-1 text-[11px] text-slate-300 hover:text-indigo-300 bg-slate-900/60 hover:bg-slate-800/80 px-2.5 py-0.5 rounded-lg border border-slate-700/60 transition-colors cursor-pointer"
+                            >
+                              <MapPin className="h-3 w-3 text-indigo-400" />
+                              <span>Meetup: <strong>{req.resource_meetup_location}</strong></span>
+                              <span className="text-[10px] text-indigo-400 font-semibold ml-1">(View Map)</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
 
                       <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-between md:justify-end">
@@ -960,6 +991,15 @@ export default function MyRequests() {
           currentUser={user}
           onClose={() => setReviewingTransaction(null)}
           onSuccess={handleReviewSuccess}
+        />
+      )}
+
+      {/* Campus Meetup Map Modal (M21) */}
+      {mapModalLocation && (
+        <CampusMeetupMapModal
+          locationName={mapModalLocation.location}
+          resourceTitle={mapModalLocation.title}
+          onClose={() => setMapModalLocation(null)}
         />
       )}
 

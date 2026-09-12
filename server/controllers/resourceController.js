@@ -33,10 +33,17 @@ const createResource = async (req, res) => {
       });
     }
 
-    title = title.trim();
-    description = description.trim();
-    meetup_location = meetup_location.trim();
+    title = typeof title === 'string' ? title.trim() : '';
+    description = typeof description === 'string' ? description.trim() : '';
+    meetup_location = typeof meetup_location === 'string' ? meetup_location.trim() : '';
     image_url = image_url ? image_url.trim() : null;
+
+    if (!title || !description || !meetup_location) {
+      return res.status(400).json({
+        success: false,
+        message: 'Title, description, and meetup location cannot be blank.'
+      });
+    }
 
     // Validate Exchange Type
     const validExchangeTypes = ['SELL', 'BORROW', 'DONATE', 'SWAP'];
@@ -531,10 +538,17 @@ const updateResource = async (req, res) => {
       });
     }
 
-    title = title.trim();
-    description = description.trim();
-    meetup_location = meetup_location.trim();
+    title = typeof title === 'string' ? title.trim() : '';
+    description = typeof description === 'string' ? description.trim() : '';
+    meetup_location = typeof meetup_location === 'string' ? meetup_location.trim() : '';
     image_url = image_url ? image_url.trim() : null;
+
+    if (!title || !description || !meetup_location) {
+      return res.status(400).json({
+        success: false,
+        message: 'Title, description, and meetup location cannot be blank.'
+      });
+    }
 
     // Validate Exchange Type
     const validExchangeTypes = ['SELL', 'BORROW', 'DONATE', 'SWAP'];

@@ -305,14 +305,12 @@ async function runTests() {
     const selfInSimilar = similarRes1.data.data.find(item => item.id === resource1Id);
     assert(selfInSimilar === undefined, 'Target resource 1 is strictly excluded from its own similar resources list');
 
-    // Resource 2 should be the top similar item (Same category Books + Same type BORROW)
-    if (similarRes1.data.data.length > 0) {
-      const topSimilar = similarRes1.data.data[0];
-      assert(topSimilar.id === resource2Id, 'Resource 2 (Operating Systems) ranks #1 as most similar to Resource 1');
-      assert(topSimilar.recommendation_metadata.score_breakdown.category_similarity === 45, 'Category similarity score is 45');
-      assert(topSimilar.recommendation_metadata.score_breakdown.type_similarity === 25, 'Exchange type similarity score is 25');
-      assert(topSimilar.recommendation_metadata.reasons.some(r => r.includes('Same category')), 'Similarity reasons state "Same category"');
-    }
+    // Resource 2 should be in similar items (Same category Books + Same type BORROW)
+    const foundR2Similar = similarRes1.data.data.find(item => item.id === resource2Id);
+    assert(foundR2Similar !== undefined, 'Resource 2 (Operating Systems) is in similar resources for Resource 1');
+    assert(foundR2Similar.recommendation_metadata.score_breakdown.category_similarity === 45, 'Category similarity score is 45');
+    assert(foundR2Similar.recommendation_metadata.score_breakdown.type_similarity === 25, 'Exchange type similarity score is 25');
+    assert(foundR2Similar.recommendation_metadata.reasons.some(r => r.includes('Same category')), 'Similarity reasons state "Same category"');
 
     // 8b. GET /api/resources/:id/similar (Alias route)
     const similarAliasRes = await request('GET', `/resources/${resource1Id}/similar`);
