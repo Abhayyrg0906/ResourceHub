@@ -3,6 +3,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Save, CheckCircle, AlertCircle } from 'lucide-react';
 import { getCategories, getResourceById, updateResource } from '../services/resourceService';
 import { useAuth } from '../context/AuthContext';
+import ImageUploader from '../components/ImageUploader';
 
 export default function EditResource() {
   const { id } = useParams();
@@ -24,7 +25,7 @@ export default function EditResource() {
   const [itemCondition, setItemCondition] = useState('GOOD');
   const [meetupLocation, setMeetupLocation] = useState('');
   const [status, setStatus] = useState('AVAILABLE');
-  const [imageUrl, setImageUrl] = useState('');
+  const [images, setImages] = useState([]);
 
   // Fetch categories and resource details
   useEffect(() => {
@@ -57,8 +58,7 @@ export default function EditResource() {
           setMeetupLocation(resData.meetup_location);
           setStatus(resData.status);
           
-          const primaryImg = resData.images && resData.images.find(img => img.is_primary)?.image_url;
-          setImageUrl(primaryImg || '');
+          setImages(resData.images || []);
         }
       } catch (err) {
         console.error('Failed to initialize edit screen:', err.message);
@@ -100,7 +100,11 @@ export default function EditResource() {
         item_condition: itemCondition,
         meetup_location: meetupLocation,
         status,
-        image_url: imageUrl || null
+        images: images.map(img => ({
+          image_url: img.image_url,
+          is_primary: Boolean(img.is_primary)
+        })),
+        image_url: images.find(img => img.is_primary)?.image_url || (images[0]?.image_url || null)
       };
 
       const res = await updateResource(id, payload);
@@ -249,14 +253,12 @@ export default function EditResource() {
                 </select>
               </div>
 
-              {/* Image URL Input */}
+              {/* Images Upload / Gallery Selection */}
               <div className="sm:col-span-2">
-                <label className="block text-sm font-semibold text-slate-300 mb-2">Image URL</label>
-                <input
-                  type="url"
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  className="w-full px-4 py-3 bg-[#0d111c]/90 border border-slate-700/60 focus:border-indigo-500/80 rounded-xl text-slate-100 placeholder-slate-500 outline-none transition-all duration-300 text-sm"
+                <ImageUploader
+                  images={images}
+                  onChange={setImages}
+                  maxImages={5}
                 />
               </div>
 

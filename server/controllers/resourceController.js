@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const { notifyWishlistAvailability, notifyWishlistCategoryMatch } = require('../services/notificationService');
+const { processAndSaveImages, deleteImageFile } = require('../services/imageService');
 
 // 1. Get Categories
 const getCategories = async (req, res) => {
@@ -21,7 +22,7 @@ const getCategories = async (req, res) => {
 // 2. Create Resource
 const createResource = async (req, res) => {
   try {
-    let { title, description, category_id, exchange_type, price, item_condition, meetup_location, image_url } = req.body;
+    let { title, description, category_id, exchange_type, price, item_condition, meetup_location, image_url, images } = req.body;
     const owner_id = req.user.id; // From protected token middleware
 
     // Validate presence
@@ -92,8 +93,27 @@ const createResource = async (req, res) => {
 
     const resourceId = result.insertId;
 
-    // Insert primary image if provided
-    if (image_url) {
+    // Handle images: Support both new `images` array and legacy `image_url` string
+    if (Array.isArray(images) && images.length > 0) {
+      const validImages = images
+        .map(img => (typeof img === 'string' ? { image_url: img.trim(), is_primary: false } : { image_url: (img.image_url || '').trim(), is_primary: Boolean(img.is_primary) }))
+        .filter(img => img.image_url.length > 0)
+        .slice(0, 5);
+
+      if (validImages.length > 0) {
+        const hasPrimary = validImages.some(img => img.is_primary);
+        if (!hasPrimary) {
+          validImages[0].is_primary = true;
+        }
+
+        for (const img of validImages) {
+          await db.query(
+            'INSERT INTO resource_images (resource_id, image_url, is_primary) VALUES (?, ?, ?)',
+            [resourceId, img.image_url, img.is_primary ? 1 : 0]
+          );
+        }
+      }
+    } else if (image_url) {
       await db.query(
         'INSERT INTO resource_images (resource_id, image_url, is_primary) VALUES (?, ?, TRUE)',
         [resourceId, image_url]
@@ -170,11 +190,10 @@ const getResources = async (req, res) => {
         r.updated_at,
         u.name AS owner_name,
         u.trust_score AS owner_trust_score,
-        ri.image_url
+        (SELECT image_url FROM resource_images WHERE resource_id = r.id ORDER BY is_primary DESC, id ASC LIMIT 1) AS image_url
       FROM resources r
       JOIN categories c ON r.category_id = c.id
       JOIN users u ON r.owner_id = u.id
-      LEFT JOIN resource_images ri ON r.id = ri.resource_id AND ri.is_primary = TRUE
     `;
 
     let countSql = `
@@ -421,9 +440,15 @@ const getResourceById = async (req, res) => {
 
     // Retrieve all images
     const [images] = await db.query(
-      'SELECT id, image_url, is_primary FROM resource_images WHERE resource_id = ? ORDER BY is_primary DESC',
+      'SELECT id, image_url, is_primary FROM resource_images WHERE resource_id = ? ORDER BY is_primary DESC, id ASC',
       [resourceId]
     );
+
+    const formattedImages = images.map(img => ({
+      id: img.id,
+      image_url: img.image_url,
+      is_primary: Boolean(img.is_primary)
+    }));
 
     // Format safe structure
     const responseData = {
@@ -447,7 +472,7 @@ const getResourceById = async (req, res) => {
         trust_score: parseFloat(resource.owner_trust_score || 100.00),
         reputation_score: parseFloat(resource.owner_reputation_score !== undefined && resource.owner_reputation_score !== null ? resource.owner_reputation_score : (resource.owner_trust_score || 100.00))
       },
-      images: images
+      images: formattedImages
     };
 
     return res.status(200).json({
@@ -496,7 +521,7 @@ const updateResource = async (req, res) => {
       });
     }
 
-    let { title, description, category_id, exchange_type, price, item_condition, meetup_location, status, image_url } = req.body;
+    let { title, description, category_id, exchange_type, price, item_condition, meetup_location, status, image_url, images } = req.body;
 
     // Validation
     if (!title || !description || category_id === undefined || !exchange_type || !item_condition || !meetup_location || !status) {
@@ -573,17 +598,49 @@ const updateResource = async (req, res) => {
       [title, description, category_id, exchange_type.toUpperCase(), finalPrice, item_condition.toUpperCase(), meetup_location, status.toUpperCase(), resourceId]
     );
 
-    // Update primary image url
-    if (image_url) {
-      const [existingImages] = await db.query('SELECT id FROM resource_images WHERE resource_id = ? AND is_primary = TRUE', [resourceId]);
-      if (existingImages && existingImages.length > 0) {
-        await db.query('UPDATE resource_images SET image_url = ? WHERE id = ?', [image_url, existingImages[0].id]);
-      } else {
-        await db.query('INSERT INTO resource_images (resource_id, image_url, is_primary) VALUES (?, ?, TRUE)', [resourceId, image_url]);
+    // Update images: Support both new `images` array and legacy `image_url`
+    if (Array.isArray(images)) {
+      const validImages = images
+        .map(img => (typeof img === 'string' ? { image_url: img.trim(), is_primary: false } : { image_url: (img.image_url || '').trim(), is_primary: Boolean(img.is_primary) }))
+        .filter(img => img.image_url.length > 0)
+        .slice(0, 5);
+
+      // Fetch existing images to clean up removed local files
+      const [existingImgs] = await db.query('SELECT image_url FROM resource_images WHERE resource_id = ?', [resourceId]);
+      const newUrls = new Set(validImages.map(img => img.image_url));
+      for (const old of existingImgs) {
+        if (!newUrls.has(old.image_url)) {
+          await deleteImageFile(old.image_url);
+        }
       }
-    } else {
-      // If user clears the image, delete primary image
-      await db.query('DELETE FROM resource_images WHERE resource_id = ? AND is_primary = TRUE', [resourceId]);
+
+      await db.query('DELETE FROM resource_images WHERE resource_id = ?', [resourceId]);
+
+      if (validImages.length > 0) {
+        const hasPrimary = validImages.some(img => img.is_primary);
+        if (!hasPrimary) {
+          validImages[0].is_primary = true;
+        }
+
+        for (const img of validImages) {
+          await db.query(
+            'INSERT INTO resource_images (resource_id, image_url, is_primary) VALUES (?, ?, ?)',
+            [resourceId, img.image_url, img.is_primary ? 1 : 0]
+          );
+        }
+      }
+    } else if (image_url !== undefined) {
+      if (image_url) {
+        const [existingImages] = await db.query('SELECT id FROM resource_images WHERE resource_id = ? AND is_primary = TRUE', [resourceId]);
+        if (existingImages && existingImages.length > 0) {
+          await db.query('UPDATE resource_images SET image_url = ? WHERE id = ?', [image_url, existingImages[0].id]);
+        } else {
+          await db.query('INSERT INTO resource_images (resource_id, image_url, is_primary) VALUES (?, ?, TRUE)', [resourceId, image_url]);
+        }
+      } else {
+        // If user clears the image, delete primary image
+        await db.query('DELETE FROM resource_images WHERE resource_id = ? AND is_primary = TRUE', [resourceId]);
+      }
     }
 
     // M14: Asynchronously notify users who wishlisted this resource of its availability
@@ -656,11 +713,266 @@ const deleteResource = async (req, res) => {
   }
 };
 
+// 7. Upload Resource Images (Temporary/Draft standalone upload)
+const uploadResourceImages = async (req, res) => {
+  try {
+    if (!req.uploadedFiles || req.uploadedFiles.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No image files provided.'
+      });
+    }
+
+    const savedImages = await processAndSaveImages(req.uploadedFiles);
+
+    return res.status(200).json({
+      success: true,
+      message: `${savedImages.length} image(s) processed and uploaded successfully.`,
+      data: savedImages
+    });
+  } catch (error) {
+    console.error('Error uploading images:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error while processing image upload.'
+    });
+  }
+};
+
+// 8. Add Image to Existing Resource Listing
+const addResourceImage = async (req, res) => {
+  try {
+    const resourceId = parseInt(req.params.id, 10);
+    if (isNaN(resourceId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid resource ID.'
+      });
+    }
+
+    const userId = req.user.id;
+
+    // Fetch existing resource
+    const [resources] = await db.query('SELECT owner_id FROM resources WHERE id = ?', [resourceId]);
+    if (!resources || resources.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Resource not found.'
+      });
+    }
+
+    if (resources[0].owner_id !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden. You do not own this resource.'
+      });
+    }
+
+    // Check current count
+    const [countRows] = await db.query('SELECT COUNT(*) AS total FROM resource_images WHERE resource_id = ?', [resourceId]);
+    const currentCount = countRows[0].total;
+
+    if (currentCount >= 5) {
+      return res.status(400).json({
+        success: false,
+        message: 'Maximum of 5 images allowed per resource.'
+      });
+    }
+
+    let imagesToAdd = [];
+
+    if (req.uploadedFiles && req.uploadedFiles.length > 0) {
+      if (currentCount + req.uploadedFiles.length > 5) {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot upload ${req.uploadedFiles.length} images. Resource already has ${currentCount} (max 5).`
+        });
+      }
+      const saved = await processAndSaveImages(req.uploadedFiles);
+      imagesToAdd = saved.map(s => s.image_url);
+    } else if (req.body.image_url) {
+      const url = req.body.image_url.trim();
+      if (!url) {
+        return res.status(400).json({
+          success: false,
+          message: 'Image URL cannot be empty.'
+        });
+      }
+      imagesToAdd = [url];
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'No image file or image_url provided.'
+      });
+    }
+
+    const inserted = [];
+    for (let i = 0; i < imagesToAdd.length; i++) {
+      const imgUrl = imagesToAdd[i];
+      // If resource currently has 0 images and this is the first image, make it primary
+      const isPrimary = (currentCount === 0 && i === 0);
+      const [insertRes] = await db.query(
+        'INSERT INTO resource_images (resource_id, image_url, is_primary) VALUES (?, ?, ?)',
+        [resourceId, imgUrl, isPrimary ? 1 : 0]
+      );
+      inserted.push({
+        id: insertRes.insertId,
+        resource_id: resourceId,
+        image_url: imgUrl,
+        is_primary: isPrimary
+      });
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: 'Image(s) added successfully.',
+      data: inserted
+    });
+  } catch (error) {
+    console.error('Error adding resource image:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error while adding image.'
+    });
+  }
+};
+
+// 9. Set Image as Primary for Resource
+const setPrimaryResourceImage = async (req, res) => {
+  try {
+    const resourceId = parseInt(req.params.id, 10);
+    const imageId = parseInt(req.params.imageId, 10);
+    if (isNaN(resourceId) || isNaN(imageId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid resource ID or image ID.'
+      });
+    }
+
+    const userId = req.user.id;
+
+    // Fetch existing resource
+    const [resources] = await db.query('SELECT owner_id FROM resources WHERE id = ?', [resourceId]);
+    if (!resources || resources.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Resource not found.'
+      });
+    }
+
+    if (resources[0].owner_id !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden. You do not own this resource.'
+      });
+    }
+
+    // Verify image belongs to this resource
+    const [images] = await db.query('SELECT id FROM resource_images WHERE id = ? AND resource_id = ?', [imageId, resourceId]);
+    if (!images || images.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Image not found on this resource.'
+      });
+    }
+
+    // Unset existing primary and set new primary
+    await db.query('UPDATE resource_images SET is_primary = FALSE WHERE resource_id = ?', [resourceId]);
+    await db.query('UPDATE resource_images SET is_primary = TRUE WHERE id = ? AND resource_id = ?', [imageId, resourceId]);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Primary image updated successfully.'
+    });
+  } catch (error) {
+    console.error('Error setting primary image:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error while updating primary image.'
+    });
+  }
+};
+
+// 10. Delete Image from Resource Listing
+const deleteResourceImage = async (req, res) => {
+  try {
+    const resourceId = parseInt(req.params.id, 10);
+    const imageId = parseInt(req.params.imageId, 10);
+    if (isNaN(resourceId) || isNaN(imageId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid resource ID or image ID.'
+      });
+    }
+
+    const userId = req.user.id;
+
+    // Fetch existing resource
+    const [resources] = await db.query('SELECT owner_id FROM resources WHERE id = ?', [resourceId]);
+    if (!resources || resources.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Resource not found.'
+      });
+    }
+
+    if (resources[0].owner_id !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden. You do not own this resource.'
+      });
+    }
+
+    // Verify image belongs to this resource
+    const [images] = await db.query('SELECT id, image_url, is_primary FROM resource_images WHERE id = ? AND resource_id = ?', [imageId, resourceId]);
+    if (!images || images.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Image not found on this resource.'
+      });
+    }
+
+    const targetImage = images[0];
+
+    // Delete DB record
+    await db.query('DELETE FROM resource_images WHERE id = ?', [imageId]);
+
+    // Delete local disk file if present
+    if (targetImage.image_url) {
+      await deleteImageFile(targetImage.image_url);
+    }
+
+    // If deleted image was primary, promote oldest remaining image
+    if (targetImage.is_primary) {
+      const [remaining] = await db.query('SELECT id FROM resource_images WHERE resource_id = ? ORDER BY id ASC LIMIT 1', [resourceId]);
+      if (remaining && remaining.length > 0) {
+        await db.query('UPDATE resource_images SET is_primary = TRUE WHERE id = ?', [remaining[0].id]);
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Image deleted successfully.'
+    });
+  } catch (error) {
+    console.error('Error deleting resource image:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error while deleting image.'
+    });
+  }
+};
+
 module.exports = {
   getCategories,
   createResource,
   getResources,
   getResourceById,
   updateResource,
-  deleteResource
+  deleteResource,
+  uploadResourceImages,
+  addResourceImage,
+  setPrimaryResourceImage,
+  deleteResourceImage
 };
+

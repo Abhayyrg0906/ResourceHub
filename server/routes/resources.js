@@ -5,17 +5,29 @@ const {
   getResourceById, 
   createResource, 
   updateResource, 
-  deleteResource 
+  deleteResource,
+  uploadResourceImages,
+  addResourceImage,
+  setPrimaryResourceImage,
+  deleteResourceImage
 } = require('../controllers/resourceController');
 const { protect } = require('../middleware/authMiddleware');
+const { handleImageUpload } = require('../middleware/imageUploadMiddleware');
 
 // Public endpoints
 router.get('/', getResources);
 router.get('/:id', getResourceById);
 
-// Protected endpoints (Require student session token)
+// Protected image upload and listing endpoints
+router.post('/upload', protect, handleImageUpload, uploadResourceImages);
 router.post('/', protect, createResource);
 router.put('/:id', protect, updateResource);
 router.delete('/:id', protect, deleteResource);
 
+// Resource-specific image management endpoints
+router.post('/:id/images', protect, handleImageUpload, addResourceImage);
+router.patch('/:id/images/:imageId/primary', protect, setPrimaryResourceImage);
+router.delete('/:id/images/:imageId', protect, deleteResourceImage);
+
 module.exports = router;
+

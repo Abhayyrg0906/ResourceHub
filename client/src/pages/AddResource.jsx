@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { PlusCircle, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
 import { getCategories, createResource } from '../services/resourceService';
+import ImageUploader from '../components/ImageUploader';
 
 export default function AddResource() {
   const [categories, setCategories] = useState([]);
@@ -17,7 +18,7 @@ export default function AddResource() {
   const [price, setPrice] = useState('');
   const [itemCondition, setItemCondition] = useState('GOOD');
   const [meetupLocation, setMeetupLocation] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
+  const [images, setImages] = useState([]);
 
   const navigate = useNavigate();
 
@@ -63,7 +64,11 @@ export default function AddResource() {
         price: exchangeType === 'SELL' ? parseFloat(price) : null,
         item_condition: itemCondition,
         meetup_location: meetupLocation,
-        image_url: imageUrl || null
+        images: images.map(img => ({
+          image_url: img.image_url,
+          is_primary: Boolean(img.is_primary)
+        })),
+        image_url: images.find(img => img.is_primary)?.image_url || (images[0]?.image_url || null)
       };
 
       const res = await createResource(payload);
@@ -185,15 +190,12 @@ export default function AddResource() {
               />
             </div>
 
-            {/* Image URL Input */}
+            {/* Images Upload / Gallery Selection */}
             <div className="sm:col-span-2">
-              <label className="block text-sm font-semibold text-slate-300 mb-2">Image URL</label>
-              <input
-                type="url"
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="e.g. https://example.com/item.jpg"
-                className="w-full px-4 py-3 bg-[#0d111c]/90 border border-slate-700/60 focus:border-indigo-500/80 rounded-xl text-slate-100 placeholder-slate-500 outline-none transition-all duration-300 text-sm"
+              <ImageUploader
+                images={images}
+                onChange={setImages}
+                maxImages={5}
               />
             </div>
 

@@ -15,16 +15,23 @@ const chatRouter = require('./routes/chat');
 const wishlistRouter = require('./routes/wishlist');
 const usersRouter = require('./routes/users');
 const { initSocket } = require('./socket');
-const db = require('./config/database');
+const path = require('path');
+const { ensureUploadDir } = require('./services/imageService');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Ensure upload directories exist
+ensureUploadDir();
 
 // Enable Cross-Origin Resource Sharing
 app.use(cors());
 
 // Parse incoming JSON requests
 app.use(express.json());
+
+// Serve uploaded static files
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.use('/api', healthRouter);

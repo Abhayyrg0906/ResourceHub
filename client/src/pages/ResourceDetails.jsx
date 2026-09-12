@@ -16,7 +16,10 @@ import {
   PlusCircle,
   X,
   Heart,
-  Award
+  Award,
+  ChevronLeft,
+  ChevronRight,
+  Star
 } from 'lucide-react';
 import { getResourceById, archiveResource, getResources } from '../services/resourceService';
 import { createRequest } from '../services/exchangeService';
@@ -44,6 +47,7 @@ export default function ResourceDetails() {
   const [requestSuccess, setRequestSuccess] = useState(false);
   const [initiatingChat, setInitiatingChat] = useState(false);
   const [showOwnerTrustModal, setShowOwnerTrustModal] = useState(false);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   const handleStartChat = async () => {
     if (!user) {
@@ -102,6 +106,10 @@ export default function ResourceDetails() {
         const res = await getResourceById(id);
         if (res.success) {
           setResource(res.data);
+          if (res.data.images && res.data.images.length > 0) {
+            const primaryIdx = res.data.images.findIndex(img => img.is_primary);
+            setActiveImageIndex(primaryIdx !== -1 ? primaryIdx : 0);
+          }
         }
       } catch (err) {
         console.error('Error loading listing details:', err.message);
@@ -219,7 +227,18 @@ export default function ResourceDetails() {
   }
 
   const isOwner = user && resource.owner && resource.owner.id === user.id;
-  const primaryImage = resource.images && resource.images.find(img => img.is_primary)?.image_url;
+  const imagesList = resource.images && resource.images.length > 0 ? resource.images : [];
+  const currentImage = imagesList[activeImageIndex] || imagesList[0];
+
+  const handlePrevImage = () => {
+    if (imagesList.length <= 1) return;
+    setActiveImageIndex((prev) => (prev === 0 ? imagesList.length - 1 : prev - 1));
+  };
+
+  const handleNextImage = () => {
+    if (imagesList.length <= 1) return;
+    setActiveImageIndex((prev) => (prev === imagesList.length - 1 ? 0 : prev + 1));
+  };
 
   return (
     <div className="space-y-6 relative">
@@ -234,18 +253,93 @@ export default function ResourceDetails() {
         {/* Left Columns: Main Details */}
         <div className="lg:col-span-2 space-y-6">
           
-          {/* Large Image display */}
-          <div className="bg-[#161d30]/60 border border-[#242f4c] rounded-3xl overflow-hidden h-96 flex items-center justify-center relative shadow-lg">
-            {primaryImage ? (
-              <img 
-                src={primaryImage} 
-                alt={resource.title} 
-                className="w-full h-full object-cover" 
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center text-slate-500 bg-gradient-to-br from-indigo-950/20 to-purple-950/20 w-full h-full">
-                <ImageIcon className="h-16 w-16 text-slate-700 mb-2" />
-                <span className="text-xs uppercase font-bold tracking-widest text-slate-500">No Image Available</span>
+          {/* Interactive Image Gallery */}
+          <div className="bg-[#161d30]/60 border border-[#242f4c] rounded-3xl overflow-hidden shadow-lg p-3 space-y-3">
+            {/* Main Stage */}
+            <div className="relative rounded-2xl overflow-hidden h-96 flex items-center justify-center bg-slate-950/80 border border-slate-800/80 group">
+              {currentImage ? (
+                <img 
+                  src={currentImage.image_url} 
+                  alt={`${resource.title} - Image ${activeImageIndex + 1}`} 
+                  className="w-full h-full object-contain sm:object-cover transition-all duration-300"
+                  onError={(e) => {
+                    e.target.src = 'https://placehold.co/600x400/1e293b/white?text=Image+Unavailable';
+                  }}
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center text-slate-500 bg-gradient-to-br from-indigo-950/20 to-purple-950/20 w-full h-full">
+                  <ImageIcon className="h-16 w-16 text-slate-700 mb-2" />
+                  <span className="text-xs uppercase font-bold tracking-widest text-slate-500">No Image Available</span>
+                </div>
+              )}
+
+              {/* Badges & Counter */}
+              {currentImage && (
+                <div className="absolute top-3 left-3 flex items-center space-x-2">
+                  {currentImage.is_primary && (
+                    <div className="bg-amber-500/90 backdrop-blur-md text-slate-950 font-bold text-[11px] px-2.5 py-1 rounded-full flex items-center space-x-1 shadow-lg">
+                      <Star className="h-3 w-3 fill-current" />
+                      <span>PRIMARY COVER</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {imagesList.length > 1 && (
+                <div className="absolute bottom-3 right-3 bg-slate-900/80 backdrop-blur-md text-slate-300 text-xs font-semibold px-2.5 py-1 rounded-full border border-slate-700/60 shadow">
+                  {activeImageIndex + 1} / {imagesList.length}
+                </div>
+              )}
+
+              {/* Navigation Arrows */}
+              {imagesList.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handlePrevImage}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-slate-900/70 hover:bg-slate-900 text-white backdrop-blur-md border border-slate-700/60 shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-200"
+                    title="Previous Image"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleNextImage}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-slate-900/70 hover:bg-slate-900 text-white backdrop-blur-md border border-slate-700/60 shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-200"
+                    title="Next Image"
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Thumbnail Strip */}
+            {imagesList.length > 1 && (
+              <div className="flex items-center space-x-3 overflow-x-auto pb-1 px-1 custom-scrollbar">
+                {imagesList.map((img, idx) => (
+                  <button
+                    key={img.id || idx}
+                    type="button"
+                    onClick={() => setActiveImageIndex(idx)}
+                    className={`relative flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border transition-all duration-200 cursor-pointer ${
+                      idx === activeImageIndex
+                        ? 'border-indigo-400 ring-2 ring-indigo-500/40 scale-105 shadow-md'
+                        : 'border-slate-800 hover:border-slate-600 opacity-70 hover:opacity-100'
+                    }`}
+                  >
+                    <img
+                      src={img.image_url}
+                      alt={`Thumbnail ${idx + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                    {img.is_primary && (
+                      <div className="absolute top-1 left-1 bg-amber-500 text-slate-950 p-0.5 rounded-full shadow">
+                        <Star className="h-2.5 w-2.5 fill-current" />
+                      </div>
+                    )}
+                  </button>
+                ))}
               </div>
             )}
           </div>
