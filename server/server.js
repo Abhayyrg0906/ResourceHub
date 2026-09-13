@@ -22,17 +22,31 @@ const { initSocket } = require('./socket');
 const path = require('path');
 const { ensureUploadDir } = require('./services/imageService');
 
+const helmet = require('helmet');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Ensure upload directories exist
 ensureUploadDir();
 
-// Enable Cross-Origin Resource Sharing
-app.use(cors());
+// Security Headers: Helmet with cross-origin resource policy allowing static assets
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 
-// Parse incoming JSON requests
-app.use(express.json());
+// Enable Cross-Origin Resource Sharing (environment-aware)
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production' && process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map(s => s.trim())
+    : true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-test-suite', 'x-simulate-rollback']
+};
+app.use(cors(corsOptions));
+
+// Parse incoming JSON requests with body size limit to prevent payload flooding
+app.use(express.json({ limit: '10mb' }));
 
 // Serve uploaded static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -56,18 +70,26 @@ app.use('/api/locations', locationsRouter);
 
 // Fallback Route for Undefined Paths (404 Handler)
 app.use((req, res, next) => {
-  const error = new Error(`Not Found - ${req.originalUrl}`);
-  res.status(404);
-  next(error);
+  res.status(404).json({
+    success: false,
+    status: 'error',
+    message: `Not Found - ${req.originalUrl}`
+  });
 });
 
-// Centralized Error Handling Middleware
+// Centralized Error Handling Middleware (Suppresses sensitive internals in production)
 app.use((err, req, res, next) => {
   const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+  const isProd = process.env.NODE_ENV === 'production';
+  const clientMessage = (isProd && statusCode === 500)
+    ? 'An unexpected server error occurred.'
+    : (err.message || 'An unexpected server error occurred.');
+
   res.status(statusCode).json({
+    success: false,
     status: 'error',
-    message: err.message || 'An unexpected server error occurred.',
-    stack: process.env.NODE_ENV === 'production' ? null : err.stack
+    message: clientMessage,
+    stack: isProd ? null : err.stack
   });
 });
 

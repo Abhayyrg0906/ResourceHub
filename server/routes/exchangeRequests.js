@@ -17,6 +17,7 @@ const {
   getTransactionQrHistory
 } = require('../controllers/qrController');
 const { protect } = require('../middleware/authMiddleware');
+const { qrLimiter } = require('../middleware/rateLimiter');
 
 // All exchange request endpoints require authentication
 router.use(protect);
@@ -39,7 +40,7 @@ router.patch('/:id/complete', completeRequest);
 // QR Verification Endpoints
 router.post('/:id/qr', generateQr);
 router.post('/:id/qr/generate', generateQr);
-router.post('/:id/qr/verify', verifyQr);
+router.post('/:id/qr/verify', qrLimiter, verifyQr);
 router.get('/:id/qr', getQrStatus);
 router.get('/:id/qr/history', getTransactionQrHistory);
 

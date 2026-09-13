@@ -17,8 +17,11 @@ const protect = async (req, res, next) => {
   }
 
   const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer')) {
-    token = authHeader.split(' ')[1];
+  if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+    const parts = authHeader.split(' ');
+    if (parts.length === 2 && parts[1].trim() !== '') {
+      token = parts[1].trim();
+    }
   }
 
   if (!token) {
