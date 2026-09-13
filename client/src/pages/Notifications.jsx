@@ -22,6 +22,9 @@ import {
   markNotificationRead, 
   markAllNotificationsRead 
 } from '../services/notificationService';
+import GlassCard from '../components/ui/GlassCard';
+import SectionHeading from '../components/ui/SectionHeading';
+import AnimatedButton from '../components/ui/AnimatedButton';
 
 export default function Notifications() {
   const [notifications, setNotifications] = useState([]);
@@ -137,6 +140,7 @@ export default function Notifications() {
           icon: ArrowRightLeft,
           color: 'text-indigo-400',
           bg: 'bg-indigo-500/10 border-indigo-500/30',
+          badge: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
           label: 'Request'
         };
       case 'REQUEST_ACCEPTED':
@@ -144,6 +148,7 @@ export default function Notifications() {
           icon: CheckCircle2,
           color: 'text-emerald-400',
           bg: 'bg-emerald-500/10 border-emerald-500/30',
+          badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
           label: 'Accepted'
         };
       case 'REQUEST_REJECTED':
@@ -151,6 +156,7 @@ export default function Notifications() {
           icon: XCircle,
           color: 'text-rose-400',
           bg: 'bg-rose-500/10 border-rose-500/30',
+          badge: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
           label: 'Declined'
         };
       case 'REQUEST_CANCELLED':
@@ -158,6 +164,7 @@ export default function Notifications() {
           icon: Ban,
           color: 'text-amber-400',
           bg: 'bg-amber-500/10 border-amber-500/30',
+          badge: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
           label: 'Cancelled'
         };
       case 'QR_VERIFIED':
@@ -165,6 +172,7 @@ export default function Notifications() {
           icon: QrCode,
           color: 'text-cyan-400',
           bg: 'bg-cyan-500/10 border-cyan-500/30',
+          badge: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
           label: 'QR Verified'
         };
       case 'EXCHANGE_COMPLETED':
@@ -172,6 +180,7 @@ export default function Notifications() {
           icon: Sparkles,
           color: 'text-purple-400',
           bg: 'bg-purple-500/10 border-purple-500/30',
+          badge: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
           label: 'Completed'
         };
       case 'REVIEW_RECEIVED':
@@ -179,6 +188,7 @@ export default function Notifications() {
           icon: Star,
           color: 'text-amber-400',
           bg: 'bg-amber-500/10 border-amber-500/30',
+          badge: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
           label: 'Review'
         };
       case 'WISHLIST_AVAILABLE':
@@ -186,6 +196,7 @@ export default function Notifications() {
           icon: Heart,
           color: 'text-pink-400',
           bg: 'bg-pink-500/10 border-pink-500/30',
+          badge: 'bg-pink-500/20 text-pink-300 border-pink-500/30',
           label: 'Wishlist Alert'
         };
       default:
@@ -193,6 +204,7 @@ export default function Notifications() {
           icon: Bell,
           color: 'text-slate-400',
           bg: 'bg-slate-800/50 border-slate-700/50',
+          badge: 'bg-slate-800 text-slate-300 border-slate-700',
           label: 'Notification'
         };
     }
@@ -204,74 +216,68 @@ export default function Notifications() {
     : notifications;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 pb-12">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#161d30]/60 p-6 rounded-3xl border border-[#242f4c] shadow-xl backdrop-blur-md">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
-            <span className="p-2.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400">
-              <Bell className="h-7 w-7" />
-            </span>
-            <span>Notifications</span>
-            {unreadCount > 0 && (
-              <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30 animate-pulse">
-                {unreadCount} new
-              </span>
-            )}
-          </h1>
-          <p className="text-sm text-slate-400 mt-1">
-            Real-time updates for exchange requests, physical handovers, and peer reviews.
-          </p>
-        </div>
+    <div className="max-w-4xl mx-auto space-y-6 pb-16">
+      {/* Header Banner */}
+      <GlassCard className="p-6 sm:p-8" glow="indigo">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <SectionHeading
+              badge="Live Stream"
+              title="Notifications"
+              description="Real-time updates for exchange requests, physical handovers, peer reviews, and saved item availability."
+            />
+          </div>
 
-        {/* Action Controls */}
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <button
-            onClick={fetchNotifications}
-            disabled={loading}
-            title="Refresh notifications"
-            className="p-2.5 rounded-xl bg-[#1f2942] hover:bg-[#283556] text-slate-300 hover:text-white border border-[#2d3a5d] transition-colors disabled:opacity-50"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-
-          {unreadCount > 0 && (
+          {/* Action Controls */}
+          <div className="flex items-center gap-2 self-start sm:self-auto flex-shrink-0">
             <button
-              onClick={handleMarkAllRead}
-              disabled={markingAll}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 hover:text-white border border-indigo-500/40 text-xs font-semibold transition-all shadow-sm disabled:opacity-50"
+              onClick={fetchNotifications}
+              disabled={loading}
+              title="Refresh notifications"
+              className="p-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white border border-white/[0.08] transition-colors disabled:opacity-50"
             >
-              <CheckCheck className="h-4 w-4" />
-              <span>{markingAll ? 'Marking...' : 'Mark all read'}</span>
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
-          )}
+
+            {unreadCount > 0 && (
+              <AnimatedButton
+                onClick={handleMarkAllRead}
+                disabled={markingAll}
+                variant="secondary"
+                size="sm"
+                icon={CheckCheck}
+              >
+                {markingAll ? 'Marking...' : 'Mark all read'}
+              </AnimatedButton>
+            )}
+          </div>
         </div>
-      </div>
+      </GlassCard>
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-2 border-b border-[#242f4c] pb-3">
+      <div className="flex items-center gap-2 border-b border-white/[0.06] pb-3">
         <button
           onClick={() => setFilter('ALL')}
-          className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
             filter === 'ALL'
-              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/25'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-[#161d30]'
+              ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/25'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
           }`}
         >
           All ({notifications.length})
         </button>
         <button
           onClick={() => setFilter('UNREAD')}
-          className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
             filter === 'UNREAD'
-              ? 'bg-pink-600 text-white shadow-md shadow-pink-600/25'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-[#161d30]'
+              ? 'bg-gradient-to-r from-pink-500 to-rose-600 text-white shadow-lg shadow-pink-500/25'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
           }`}
         >
           <span>Unread</span>
           {unreadCount > 0 && (
-            <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-              filter === 'UNREAD' ? 'bg-pink-800 text-white' : 'bg-pink-500/20 text-pink-300'
+            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
+              filter === 'UNREAD' ? 'bg-black/30 text-white' : 'bg-pink-500/20 text-pink-300 border border-pink-500/30'
             }`}>
               {unreadCount}
             </span>
@@ -281,7 +287,7 @@ export default function Notifications() {
 
       {/* Error state */}
       {error && (
-        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center gap-3 text-rose-300 text-sm">
+        <GlassCard className="p-4 bg-rose-500/10 border-rose-500/30 flex items-center gap-3 text-rose-300 text-sm">
           <AlertCircle className="h-5 w-5 flex-shrink-0" />
           <p className="flex-1">{error}</p>
           <button 
@@ -290,7 +296,7 @@ export default function Notifications() {
           >
             Try Again
           </button>
-        </div>
+        </GlassCard>
       )}
 
       {/* Loading state */}
@@ -309,13 +315,15 @@ export default function Notifications() {
             const IconComponent = meta.icon;
 
             return (
-              <div
+              <GlassCard
                 key={n.id}
                 onClick={() => handleNotificationClick(n)}
-                className={`group relative p-5 rounded-2xl border transition-all duration-200 cursor-pointer flex items-start justify-between gap-4 ${
+                interactive
+                glow={!n.is_read ? 'indigo' : 'none'}
+                className={`p-5 flex items-start justify-between gap-4 transition-all duration-300 cursor-pointer ${
                   !n.is_read
-                    ? 'bg-gradient-to-r from-[#192238] to-[#141b2d] border-indigo-500/40 shadow-lg shadow-indigo-950/20 hover:border-indigo-400'
-                    : 'bg-[#161d30]/40 border-[#242f4c]/70 hover:bg-[#161d30]/80 hover:border-[#2d3a5d] opacity-90'
+                    ? 'border-indigo-500/40 bg-gradient-to-r from-indigo-950/30 to-purple-950/20 shadow-lg shadow-indigo-950/30'
+                    : 'opacity-85 hover:opacity-100'
                 }`}
               >
                 {/* Left side: Icon and content */}
@@ -324,12 +332,12 @@ export default function Notifications() {
                     <IconComponent className={`h-5 w-5 ${meta.color}`} />
                   </div>
 
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 space-y-1.5">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md ${meta.bg} ${meta.color}`}>
+                      <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md border ${meta.badge}`}>
                         {meta.label}
                       </span>
-                      <h3 className={`font-bold text-sm ${!n.is_read ? 'text-white' : 'text-slate-300'}`}>
+                      <h3 className={`font-bold text-sm ${!n.is_read ? 'text-white' : 'text-slate-200'}`}>
                         {n.title}
                       </h3>
                       {!n.is_read && (
@@ -337,17 +345,17 @@ export default function Notifications() {
                       )}
                     </div>
 
-                    <p className="text-xs text-slate-300 mt-1.5 leading-relaxed break-words">
+                    <p className="text-xs text-slate-300 leading-relaxed break-words font-normal">
                       {n.message}
                     </p>
 
-                    <div className="flex items-center gap-3 mt-2 text-[11px] text-slate-500">
+                    <div className="flex items-center gap-3 pt-1 text-[11px] text-slate-400">
                       <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
+                        <Clock className="h-3 w-3 text-slate-500" />
                         {formatTimeAgo(n.created_at)}
                       </span>
                       {n.related_id && (
-                        <span className="flex items-center gap-1 text-indigo-400 group-hover:underline">
+                        <span className="flex items-center gap-1 text-indigo-400 hover:text-indigo-300 transition-colors font-medium">
                           <span>{n.type === 'WISHLIST_AVAILABLE' ? 'View resource' : 'View exchange'}</span>
                           <ExternalLink className="h-2.5 w-2.5" />
                         </span>
@@ -363,32 +371,32 @@ export default function Notifications() {
                       onClick={(e) => handleMarkAsRead(n.id, e)}
                       disabled={processingId === n.id}
                       title="Mark as read"
-                      className="p-2 rounded-xl bg-slate-800/80 hover:bg-emerald-500/20 text-slate-400 hover:text-emerald-300 border border-slate-700/50 hover:border-emerald-500/40 transition-colors"
+                      className="p-2 rounded-xl bg-white/[0.04] hover:bg-emerald-500/20 text-slate-400 hover:text-emerald-300 border border-white/[0.08] hover:border-emerald-500/40 transition-colors"
                     >
                       <Check className="h-4 w-4" />
                     </button>
                   </div>
                 )}
-              </div>
+              </GlassCard>
             );
           })
         ) : (
           !loading && (
-            <div className="text-center py-20 bg-[#161d30]/30 border border-[#242f4c] rounded-3xl space-y-4">
-              <div className="w-14 h-14 rounded-full bg-[#1f2942] border border-[#2d3a5d] flex items-center justify-center mx-auto text-slate-500">
+            <GlassCard className="text-center py-20 space-y-4">
+              <div className="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mx-auto text-slate-500">
                 <Bell className="h-7 w-7" />
               </div>
               <div className="space-y-1">
-                <p className="text-slate-300 font-semibold text-base">
+                <p className="text-white font-bold text-base">
                   {filter === 'UNREAD' ? 'No unread notifications' : 'No notifications yet'}
                 </p>
-                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
                   {filter === 'UNREAD' 
                     ? "You've read all your notifications. Check the 'All' tab to view past activity." 
                     : 'When you request or offer resources, updates about approvals, QR verification, and reviews will show up here.'}
                 </p>
               </div>
-            </div>
+            </GlassCard>
           )
         )}
       </div>

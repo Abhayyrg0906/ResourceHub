@@ -16,6 +16,7 @@ import {
 import { QRCodeCanvas } from 'qrcode.react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { generateQr, getQrStatus, verifyQr } from '../services/exchangeService';
+import GlassCard from './ui/GlassCard';
 
 export default function HandoverQrModal({ transaction, currentUser, onClose, onVerified }) {
   const isOwner = currentUser && Number(currentUser.id) === Number(transaction.owner_id);
@@ -68,7 +69,6 @@ export default function HandoverQrModal({ transaction, currentUser, onClose, onV
       const res = await generateQr(transaction.id);
       if (res.success && res.data) {
         setQrData(res.data);
-        // Start polling check
         clearInterval(pollIntervalRef.current);
         pollIntervalRef.current = setInterval(fetchStatus, 2500);
       }
@@ -82,7 +82,6 @@ export default function HandoverQrModal({ transaction, currentUser, onClose, onV
   // Initial load
   useEffect(() => {
     fetchStatus();
-    // Poll if modal is open
     pollIntervalRef.current = setInterval(fetchStatus, 2500);
 
     return () => {
@@ -153,9 +152,7 @@ export default function HandoverQrModal({ transaction, currentUser, onClose, onV
             }
             await handleVerification(token);
           },
-          () => {
-            // Quiet frame processing
-          }
+          () => {}
         );
       } catch (err) {
         console.error('Camera scanner init failed:', err);
@@ -226,8 +223,8 @@ export default function HandoverQrModal({ transaction, currentUser, onClose, onV
   const isQrVerified = qrStatus === 'VERIFIED' || success;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0d111c]/85 backdrop-blur-md p-4 animate-fadeIn overflow-y-auto">
-      <div className="bg-[#141b2d] border border-[#242f4c] rounded-3xl p-6 sm:p-8 max-w-lg w-full relative shadow-2xl space-y-6 my-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fadeIn overflow-y-auto">
+      <div className="bg-[#0F1424] border border-white/10 rounded-3xl p-6 sm:p-8 max-w-lg w-full relative shadow-2xl space-y-6 my-auto">
         
         {/* Close button */}
         <button
@@ -235,7 +232,7 @@ export default function HandoverQrModal({ transaction, currentUser, onClose, onV
             stopCameraScanner();
             onClose();
           }}
-          className="absolute top-5 right-5 text-slate-400 hover:text-white transition-colors cursor-pointer p-1 rounded-full hover:bg-slate-800"
+          className="absolute top-5 right-5 text-slate-400 hover:text-white transition-colors cursor-pointer p-1.5 rounded-full hover:bg-white/10"
           aria-label="Close modal"
         >
           <X className="h-5 w-5" />
@@ -244,20 +241,20 @@ export default function HandoverQrModal({ transaction, currentUser, onClose, onV
         {/* Modal Header */}
         <div className="space-y-1.5 pr-8">
           <div className="flex items-center space-x-2">
-            <span className="p-1.5 rounded-lg bg-indigo-600/20 text-indigo-400 border border-indigo-500/20">
+            <span className="p-1.5 rounded-xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/25">
               <QrCode className="h-4 w-4" />
             </span>
-            <span className="text-xs font-bold uppercase tracking-wider text-indigo-400">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-indigo-400 font-display">
               {isOwner ? 'Resource Owner Handover' : 'Requester Item Verification'}
             </span>
           </div>
-          <h2 className="text-xl font-extrabold text-white tracking-tight">
+          <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight font-display">
             {transaction.resource_title}
           </h2>
           <div className="text-xs text-slate-400 flex flex-wrap items-center gap-2 pt-1">
             <span>Partner: <strong className="text-slate-200">{isOwner ? transaction.requester_name : transaction.owner_name}</strong></span>
             <span>•</span>
-            <span className="uppercase text-[10px] bg-slate-800/80 px-2 py-0.5 rounded text-indigo-300 font-semibold border border-slate-700/50">
+            <span className="uppercase text-[10px] bg-white/5 px-2 py-0.5 rounded-full text-indigo-300 font-bold border border-white/10">
               {transaction.resource_exchange_type || 'EXCHANGE'}
             </span>
           </div>
@@ -268,7 +265,7 @@ export default function HandoverQrModal({ transaction, currentUser, onClose, onV
           <div className="bg-rose-500/10 border border-rose-500/30 text-rose-300 rounded-2xl p-4 flex items-start space-x-3 text-xs leading-relaxed animate-fadeIn">
             <AlertTriangle className="h-4 w-4 text-rose-400 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="font-semibold text-rose-200">Handover Alert</p>
+              <p className="font-bold text-rose-200">Handover Alert</p>
               <p className="text-[11px] text-rose-300/90 mt-0.5">{error}</p>
             </div>
           </div>
@@ -277,26 +274,26 @@ export default function HandoverQrModal({ transaction, currentUser, onClose, onV
         {/* SUCCESS CELEBRATION SCREEN */}
         {isQrVerified ? (
           <div className="text-center py-6 space-y-5 animate-fadeIn">
-            <div className="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/10 animate-bounce">
-              <CheckCircle2 className="h-9 w-9" />
+            <div className="w-18 h-18 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto shadow-2xl shadow-emerald-500/20 animate-bounce">
+              <CheckCircle2 className="h-10 w-10" />
             </div>
 
             <div className="space-y-1">
-              <h3 className="text-xl font-extrabold text-white">Handover Verified Successfully!</h3>
-              <p className="text-xs text-slate-300 max-w-sm mx-auto">
+              <h3 className="text-xl sm:text-2xl font-black text-white font-display">Handover Verified!</h3>
+              <p className="text-xs text-slate-300 max-w-sm mx-auto leading-relaxed">
                 {isOwner 
                   ? 'Physical exchange verified by the requester. You can now complete the transaction to finalize records and update trust scores.' 
                   : 'Physical exchange verified! The resource is now handed over. Waiting for owner to complete the transaction.'}
               </p>
             </div>
 
-            <div className="bg-[#0b0f19] border border-emerald-500/30 rounded-2xl p-4 text-left space-y-2 max-w-sm mx-auto">
+            <div className="bg-[#090D18] border border-emerald-500/30 rounded-2xl p-4 text-left space-y-2 max-w-sm mx-auto shadow-inner">
               <div className="flex items-center space-x-2 text-emerald-400 text-xs font-bold uppercase tracking-wider">
                 <ShieldCheck className="h-4 w-4" />
                 <span>Verification Record</span>
               </div>
               <div className="text-[11px] text-slate-400 space-y-1">
-                <div>Resource: <span className="text-slate-200 font-medium">{transaction.resource_title}</span></div>
+                <div>Resource: <span className="text-slate-200 font-semibold">{transaction.resource_title}</span></div>
                 <div>Status: <span className="text-emerald-400 font-bold">VERIFIED & CONFIRMED</span></div>
                 <div>Time: <span className="text-slate-200">{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></div>
               </div>
@@ -307,7 +304,7 @@ export default function HandoverQrModal({ transaction, currentUser, onClose, onV
                 stopCameraScanner();
                 onClose();
               }}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-6 py-2.5 rounded-xl cursor-pointer shadow-lg shadow-indigo-600/20 transition-all"
+              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold px-8 py-3 rounded-xl cursor-pointer shadow-xl shadow-indigo-600/25 transition-all hover:scale-[1.02]"
             >
               Done
             </button>
@@ -319,18 +316,18 @@ export default function HandoverQrModal({ transaction, currentUser, onClose, onV
           <div className="space-y-6">
             {loading ? (
               <div className="text-center py-10 space-y-3">
-                <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                <div className="w-7 h-7 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
                 <p className="text-xs text-slate-400">Loading handover security status...</p>
               </div>
             ) : !isQrGenerated || isQrExpired ? (
               /* Generate / Regenerate CTA view */
-              <div className="bg-[#0b0e17] border border-[#242f4c] rounded-2xl p-6 text-center space-y-4 shadow-inner">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mx-auto text-indigo-400">
-                  {isQrExpired ? <Clock className="h-6 w-6 text-rose-400" /> : <QrCode className="h-6 w-6" />}
+              <div className="bg-[#090D18] border border-white/10 rounded-2xl p-6 text-center space-y-4 shadow-inner">
+                <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mx-auto text-indigo-400">
+                  {isQrExpired ? <Clock className="h-7 w-7 text-rose-400" /> : <QrCode className="h-7 w-7" />}
                 </div>
 
                 <div className="space-y-1">
-                  <h4 className="text-sm font-bold text-white">
+                  <h4 className="text-sm font-bold text-white font-display">
                     {isQrExpired ? 'QR Code Expired' : 'Ready for In-Person Handover'}
                   </h4>
                   <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
@@ -343,7 +340,7 @@ export default function HandoverQrModal({ transaction, currentUser, onClose, onV
                 <button
                   onClick={handleGenerate}
                   disabled={actionLoading}
-                  className="w-full bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold py-3 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md shadow-indigo-600/20 cursor-pointer disabled:opacity-50 flex items-center justify-center space-x-2"
+                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-xl shadow-indigo-600/25 cursor-pointer disabled:opacity-50 flex items-center justify-center space-x-2"
                 >
                   {actionLoading ? (
                     <>
@@ -352,7 +349,7 @@ export default function HandoverQrModal({ transaction, currentUser, onClose, onV
                     </>
                   ) : (
                     <>
-                      <Sparkles className="h-4 w-4" />
+                      <Sparkles className="h-4 w-4 text-amber-300" />
                       <span>{isQrExpired ? 'Regenerate New QR Code' : 'Generate Handover QR'}</span>
                     </>
                   )}
@@ -362,10 +359,10 @@ export default function HandoverQrModal({ transaction, currentUser, onClose, onV
               /* Active Generated QR Code Display */
               <div className="space-y-5">
                 {/* Visual QR Card */}
-                <div className="bg-[#0b0e17] border border-indigo-500/30 rounded-2xl p-6 flex flex-col items-center space-y-4 shadow-xl relative overflow-hidden">
+                <div className="bg-[#090D18] border border-indigo-500/30 rounded-2xl p-6 flex flex-col items-center space-y-4 shadow-2xl relative overflow-hidden">
                   
                   {/* Subtle top indicator */}
-                  <div className="flex items-center space-x-2 bg-indigo-950/60 border border-indigo-500/30 px-3 py-1 rounded-full text-[11px] font-semibold text-indigo-300">
+                  <div className="flex items-center space-x-2 bg-indigo-950/80 border border-indigo-500/30 px-3 py-1 rounded-full text-[11px] font-semibold text-indigo-300">
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
                     <span>Live Verification Ready</span>
                   </div>
@@ -405,13 +402,13 @@ export default function HandoverQrModal({ transaction, currentUser, onClose, onV
                   </div>
 
                   {/* Instructions */}
-                  <p className="text-[11px] text-slate-400 text-center max-w-xs">
+                  <p className="text-[11px] text-slate-400 text-center max-w-xs leading-relaxed">
                     Show this screen to <strong className="text-slate-200">{transaction.requester_name}</strong>. Their scan will instantly confirm the exchange.
                   </p>
                 </div>
 
                 {/* Manual Code Fallback & Regenerate Row */}
-                <div className="bg-slate-900/50 border border-[#242f4c] rounded-xl p-3 flex items-center justify-between gap-2">
+                <div className="bg-[#090D18] border border-white/10 rounded-2xl p-3.5 flex items-center justify-between gap-2 shadow-inner">
                   <div className="truncate text-left">
                     <span className="text-[10px] text-slate-500 uppercase font-bold block">Manual Backup Code</span>
                     <span className="text-xs font-mono text-slate-300 truncate max-w-[200px] block">
@@ -422,7 +419,7 @@ export default function HandoverQrModal({ transaction, currentUser, onClose, onV
                   <div className="flex items-center space-x-2 flex-shrink-0">
                     <button
                       onClick={handleCopyToken}
-                      className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs font-semibold flex items-center space-x-1 border border-slate-700/60 cursor-pointer"
+                      className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-semibold flex items-center space-x-1 border border-white/10 cursor-pointer transition-colors"
                       title="Copy full token"
                     >
                       {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
@@ -432,7 +429,7 @@ export default function HandoverQrModal({ transaction, currentUser, onClose, onV
                     <button
                       onClick={handleGenerate}
                       disabled={actionLoading}
-                      className="px-2.5 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 text-xs font-semibold flex items-center space-x-1 border border-indigo-500/30 cursor-pointer"
+                      className="px-3 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 text-xs font-semibold flex items-center space-x-1 border border-indigo-500/30 cursor-pointer transition-colors"
                       title="Regenerate QR"
                     >
                       <RefreshCw className={`h-3.5 w-3.5 ${actionLoading ? 'animate-spin' : ''}`} />
@@ -450,7 +447,7 @@ export default function HandoverQrModal({ transaction, currentUser, onClose, onV
              ==================================================== */
           <div className="space-y-5">
             {/* Step-by-step instructions */}
-            <div className="bg-slate-900/60 border border-[#242f4c] rounded-2xl p-4 text-xs space-y-2 text-slate-300">
+            <div className="bg-[#090D18] border border-white/10 rounded-2xl p-4 text-xs space-y-2 text-slate-300 shadow-inner">
               <div className="flex items-center space-x-2 text-indigo-400 font-bold uppercase text-[10px] tracking-wider">
                 <Info className="h-3.5 w-3.5" />
                 <span>Handover Instructions</span>
@@ -463,11 +460,11 @@ export default function HandoverQrModal({ transaction, currentUser, onClose, onV
             </div>
 
             {/* Mode Switcher Tabs */}
-            <div className="flex bg-[#0b0e17] p-1 rounded-xl border border-[#242f4c]">
+            <div className="flex bg-[#090D18] p-1 rounded-2xl border border-white/10">
               <button
                 type="button"
                 onClick={() => setActiveTab('camera')}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg flex items-center justify-center space-x-1.5 transition-all cursor-pointer ${
+                className={`flex-1 py-2.5 text-xs font-bold rounded-xl flex items-center justify-center space-x-1.5 transition-all cursor-pointer ${
                   activeTab === 'camera'
                     ? 'bg-indigo-600 text-white shadow-md'
                     : 'text-slate-400 hover:text-white'
@@ -480,7 +477,7 @@ export default function HandoverQrModal({ transaction, currentUser, onClose, onV
               <button
                 type="button"
                 onClick={() => setActiveTab('manual')}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg flex items-center justify-center space-x-1.5 transition-all cursor-pointer ${
+                className={`flex-1 py-2.5 text-xs font-bold rounded-xl flex items-center justify-center space-x-1.5 transition-all cursor-pointer ${
                   activeTab === 'manual'
                     ? 'bg-indigo-600 text-white shadow-md'
                     : 'text-slate-400 hover:text-white'
@@ -496,7 +493,7 @@ export default function HandoverQrModal({ transaction, currentUser, onClose, onV
               <div className="space-y-4 animate-fadeIn">
                 <div 
                   id={`qr-reader-handover-${transaction.id}`} 
-                  className="overflow-hidden rounded-2xl border-2 border-indigo-500/40 bg-black min-h-[220px] shadow-lg"
+                  className="overflow-hidden rounded-2xl border-2 border-indigo-500/40 bg-black min-h-[220px] shadow-2xl"
                 />
 
                 <div className="flex items-center justify-between text-xs text-slate-500 px-1">
@@ -516,16 +513,16 @@ export default function HandoverQrModal({ transaction, currentUser, onClose, onV
             {activeTab === 'manual' && (
               <div className="space-y-4 animate-fadeIn">
                 <div className="space-y-2">
-                  <label className="block text-xs font-semibold text-slate-300">
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider font-display">
                     Handover Verification Code
                   </label>
                   <div className="space-y-2">
                     <input
                       type="text"
-                      placeholder="Paste the verification code (e.g., from owner)"
+                      placeholder="Paste the verification code (e.g. from owner)"
                       value={manualToken}
                       onChange={(e) => setManualToken(e.target.value)}
-                      className="w-full px-4 py-3 bg-[#0b0e17] border border-slate-700 focus:border-indigo-500 rounded-xl text-slate-100 placeholder-slate-500 outline-none text-xs font-mono"
+                      className="w-full px-4 py-3.5 bg-[#090D18] border border-white/10 focus:border-indigo-500 rounded-2xl text-slate-100 placeholder-slate-500 outline-none text-xs font-mono shadow-inner"
                     />
                     
                     <button
@@ -534,11 +531,9 @@ export default function HandoverQrModal({ transaction, currentUser, onClose, onV
                         try {
                           const text = await navigator.clipboard.readText();
                           if (text) setManualToken(text);
-                        } catch (e) {
-                          // Clipboard permission not granted
-                        }
+                        } catch (e) {}
                       }}
-                      className="text-[11px] text-indigo-400 hover:text-indigo-300 flex items-center space-x-1 cursor-pointer"
+                      className="text-[11px] text-indigo-400 hover:text-indigo-300 flex items-center space-x-1 cursor-pointer font-medium"
                     >
                       <Copy className="h-3 w-3" />
                       <span>Paste from clipboard</span>
@@ -550,7 +545,7 @@ export default function HandoverQrModal({ transaction, currentUser, onClose, onV
                   type="button"
                   onClick={() => handleVerification(manualToken)}
                   disabled={actionLoading || !manualToken.trim()}
-                  className="w-full bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold py-3 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md shadow-indigo-600/20 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-xl shadow-indigo-600/25 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                 >
                   {actionLoading ? (
                     <>

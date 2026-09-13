@@ -213,9 +213,11 @@ const renewResource = async (resourceId, userId) => {
 
   // If reactivated from ARCHIVED state, notify wishlist subscribers
   if (wasArchived) {
-    notifyWishlistAvailability(parsedId).catch(err => {
+    try {
+      await notifyWishlistAvailability(parsedId);
+    } catch (err) {
       console.error('[ExpiryService] Error notifying wishlist on resource renewal:', err.message);
-    });
+    }
   }
 
   return {

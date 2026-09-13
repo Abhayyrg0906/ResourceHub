@@ -15,10 +15,12 @@ import {
   ArrowLeft,
   ShoppingBag,
   Tag,
-  AlertCircle
+  AlertCircle,
+  Sparkles
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import chatService from '../services/chatService';
+import GlassCard from '../components/ui/GlassCard';
 
 export default function Chat() {
   const { conversationId: routeConversationId } = useParams();
@@ -167,23 +169,19 @@ export default function Chat() {
       const currentActive = activeConvIdRef.current;
       if (msg.conversation_id === currentActive) {
         setMessages(prev => {
-          // Avoid duplicates
           if (prev.some(m => m.id === msg.id)) return prev;
           return [...prev, msg];
         });
         scrollToBottom();
 
-        // If sent by partner and window is focused, mark read
         if (user && msg.sender_id !== user.id) {
           chatService.markAsRead(currentActive).catch(() => {});
         }
       }
 
-      // Update conversations list with latest message
       setConversations(prev => {
         const foundIndex = prev.findIndex(c => c.id === msg.conversation_id);
         if (foundIndex === -1) {
-          // Fetch freshly if brand new conversation
           fetchConversations(false);
           return prev;
         }
@@ -280,14 +278,12 @@ export default function Chat() {
       setSending(true);
       setError(null);
 
-      // Stop typing
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       chatService.sendTyping(activeConvId, false);
 
       const res = await chatService.sendMessage(activeConvId, text);
       if (res && res.success) {
         setMessageText('');
-        // Add to messages if socket didn't already append it
         setMessages(prev => {
           if (prev.some(m => m.id === res.message.id)) return prev;
           return [...prev, res.message];
@@ -304,13 +300,11 @@ export default function Chat() {
     }
   };
 
-  // Select a conversation from the sidebar
   const handleSelectConversation = (conv) => {
     setActiveConvId(conv.id);
     navigate(`/chat/${conv.id}`);
   };
 
-  // Filter conversations based on search
   const filteredConversations = conversations.filter(c => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
@@ -332,63 +326,63 @@ export default function Chat() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 h-[calc(100vh-5rem)] flex flex-col">
-      {/* Top Bar / Status */}
-      <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#242f4c]">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 h-[calc(100vh-5.5rem)] flex flex-col space-y-4">
+      {/* Top Status Bar */}
+      <GlassCard className="p-4 flex items-center justify-between" glow="indigo">
         <div className="flex items-center space-x-3">
-          <div className="p-2 rounded-xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/30">
-            <MessageSquare className="h-6 w-6" />
+          <div className="p-2.5 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/25">
+            <MessageSquare className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white tracking-wide">Real-Time Chat</h1>
-            <p className="text-xs text-slate-400">Directly coordinate exchanges and handovers with peers</p>
+            <h1 className="text-lg font-black text-white tracking-wide font-display">Campus Live Chat</h1>
+            <p className="text-xs text-slate-400">Directly coordinate exchanges and meetup locations with student peers</p>
           </div>
         </div>
 
         {/* Connection status badge */}
-        <div className="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-[#161d30] border border-[#242f4c] text-xs">
+        <div className="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-white/[0.03] border border-white/[0.08] text-xs">
           {connectionStatus === 'connected' ? (
             <>
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-emerald-400 font-medium">Live Connected</span>
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+              <span className="text-emerald-300 font-bold">Live Connected</span>
             </>
           ) : connectionStatus === 'connecting' ? (
             <>
               <RefreshCw className="h-3 w-3 text-amber-400 animate-spin" />
-              <span className="text-amber-400 font-medium">Connecting...</span>
+              <span className="text-amber-300 font-bold">Connecting...</span>
             </>
           ) : (
             <>
               <WifiOff className="h-3 w-3 text-rose-400" />
-              <span className="text-rose-400 font-medium">Reconnecting</span>
+              <span className="text-rose-300 font-bold">Reconnecting</span>
             </>
           )}
         </div>
-      </div>
+      </GlassCard>
 
       {/* Main Two-Column Layout */}
-      <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-12 gap-4 bg-[#121826] rounded-2xl border border-[#242f4c] shadow-2xl overflow-hidden">
+      <GlassCard className="flex-1 min-h-0 p-0 grid grid-cols-1 md:grid-cols-12 overflow-hidden" glow="none">
         
         {/* Left Sidebar: Conversation List (4 cols) */}
-        <div className={`md:col-span-4 flex flex-col border-r border-[#242f4c] bg-[#161d30]/60 ${
+        <div className={`md:col-span-4 flex flex-col border-r border-white/[0.06] bg-black/20 ${
           activeConvId ? 'hidden md:flex' : 'flex'
         }`}>
           {/* Search bar */}
-          <div className="p-3 border-b border-[#242f4c]">
+          <div className="p-3.5 border-b border-white/[0.06]">
             <div className="relative">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+              <Search className="absolute left-3.5 top-2.5 h-4 w-4 text-slate-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search peers or listings..."
-                className="w-full pl-9 pr-3 py-2 bg-[#1f2942] border border-[#2d3a5a] rounded-xl text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition-colors"
+                className="w-full pl-10 pr-3 py-2 bg-black/40 border border-white/[0.08] rounded-xl text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition-colors"
               />
             </div>
           </div>
 
           {/* Conversation List */}
-          <div className="flex-1 overflow-y-auto divide-y divide-[#242f4c]/50">
+          <div className="flex-1 overflow-y-auto divide-y divide-white/[0.04]">
             {loadingConversations ? (
               <div className="flex flex-col items-center justify-center h-48 space-y-2">
                 <RefreshCw className="h-6 w-6 text-indigo-400 animate-spin" />
@@ -396,18 +390,18 @@ export default function Chat() {
               </div>
             ) : filteredConversations.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-64 text-center px-4 space-y-3">
-                <div className="p-3 rounded-full bg-[#1f2942] text-slate-400">
-                  <MessageSquare className="h-8 w-8" />
+                <div className="p-3.5 rounded-2xl bg-white/[0.04] text-slate-400 border border-white/[0.06]">
+                  <MessageSquare className="h-7 w-7" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-slate-300">No conversations yet</p>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Find a resource in the Marketplace and click "Chat with Owner" to start a chat!
+                  <p className="text-sm font-bold text-white font-display">No conversations yet</p>
+                  <p className="text-xs text-slate-400 mt-1 max-w-xs leading-relaxed">
+                    Find a resource in the Marketplace and click "Chat with Owner" to coordinate.
                   </p>
                 </div>
                 <Link
                   to="/resources"
-                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition-colors"
+                  className="px-3.5 py-1.5 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-500/20"
                 >
                   Browse Marketplace
                 </Link>
@@ -419,19 +413,19 @@ export default function Chat() {
                   <button
                     key={conv.id}
                     onClick={() => handleSelectConversation(conv)}
-                    className={`w-full text-left p-3.5 transition-all duration-200 flex items-start space-x-3 ${
+                    className={`w-full text-left p-4 transition-all duration-200 flex items-start space-x-3.5 cursor-pointer ${
                       isActive
-                        ? 'bg-indigo-600/15 border-l-4 border-indigo-500'
-                        : 'hover:bg-[#1f2942]/60'
+                        ? 'bg-gradient-to-r from-indigo-950/40 to-purple-950/30 border-l-4 border-indigo-500'
+                        : 'hover:bg-white/[0.03]'
                     }`}
                   >
                     {/* User Avatar */}
                     <div className="relative flex-shrink-0">
-                      <div className="h-11 w-11 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-white text-base shadow-md">
+                      <div className="h-11 w-11 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center font-black text-white text-base shadow-md font-display">
                         {conv.partner?.name ? conv.partner.name.charAt(0).toUpperCase() : 'U'}
                       </div>
                       {conv.unread_count > 0 && (
-                        <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-pink-600 rounded-full ring-2 ring-[#121826] animate-pulse">
+                        <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-black text-white bg-pink-500 rounded-full ring-2 ring-[#080A12] animate-pulse">
                           {conv.unread_count}
                         </span>
                       )}
@@ -440,29 +434,29 @@ export default function Chat() {
                     {/* Text Details */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-semibold text-white truncate">
+                        <h3 className="text-xs font-bold text-white truncate font-display">
                           {conv.partner?.name || 'User'}
                         </h3>
-                        <span className="text-[11px] text-slate-400 flex-shrink-0 ml-1">
+                        <span className="text-[10px] text-slate-500 flex-shrink-0 ml-1">
                           {formatTime(conv.last_message?.created_at || conv.last_message_at)}
                         </span>
                       </div>
 
                       {/* Resource pill */}
-                      <div className="flex items-center space-x-1.5 mt-0.5">
+                      <div className="flex items-center space-x-1 mt-0.5">
                         <Tag className="h-3 w-3 text-indigo-400 flex-shrink-0" />
-                        <span className="text-[11px] text-indigo-300 truncate font-medium">
+                        <span className="text-[11px] text-indigo-300 truncate font-semibold">
                           {conv.resource?.title || 'Resource'}
                         </span>
                       </div>
 
                       {/* Last message preview */}
                       <p className={`text-xs mt-1 truncate ${
-                        conv.unread_count > 0 ? 'text-slate-100 font-semibold' : 'text-slate-400'
+                        conv.unread_count > 0 ? 'text-white font-bold' : 'text-slate-400'
                       }`}>
                         {conv.last_message ? (
                           <>
-                            {conv.last_message.is_mine && <span className="text-indigo-400">You: </span>}
+                            {conv.last_message.is_mine && <span className="text-indigo-400 font-semibold">You: </span>}
                             {conv.last_message.text}
                           </>
                         ) : (
@@ -478,35 +472,32 @@ export default function Chat() {
         </div>
 
         {/* Right Pane: Active Chat Window (8 cols) */}
-        <div className={`md:col-span-8 flex flex-col bg-[#0d111c]/90 ${
+        <div className={`md:col-span-8 flex flex-col bg-black/40 ${
           !activeConvId ? 'hidden md:flex' : 'flex'
         }`}>
           {activeConversation ? (
             <>
               {/* Chat Header */}
-              <div className="p-3.5 border-b border-[#242f4c] bg-[#161d30] flex items-center justify-between">
+              <div className="p-4 border-b border-white/[0.06] bg-black/20 flex items-center justify-between backdrop-blur-md">
                 <div className="flex items-center space-x-3 min-w-0">
-                  {/* Mobile Back Button */}
                   <button
                     onClick={() => setActiveConvId(null)}
-                    className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-[#1f2942]"
+                    className="md:hidden p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/[0.04]"
                   >
                     <ArrowLeft className="h-5 w-5" />
                   </button>
 
-                  {/* Partner Avatar */}
-                  <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-white text-sm shadow">
+                  <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center font-black text-white text-sm shadow font-display">
                     {activeConversation.partner?.name ? activeConversation.partner.name.charAt(0).toUpperCase() : 'U'}
                   </div>
 
-                  {/* Partner Details */}
                   <div className="min-w-0">
                     <div className="flex items-center space-x-2">
-                      <h2 className="text-sm font-bold text-white truncate">
+                      <h2 className="text-sm font-black text-white truncate font-display">
                         {activeConversation.partner?.name || 'User'}
                       </h2>
                       {activeConversation.partner?.trust_score !== undefined && (
-                        <div className="flex items-center space-x-1 px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-semibold">
+                        <div className="flex items-center space-x-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold">
                           <ShieldCheck className="h-3 w-3" />
                           <span>Trust {Number(activeConversation.partner.trust_score).toFixed(0)}</span>
                         </div>
@@ -518,15 +509,14 @@ export default function Chat() {
                   </div>
                 </div>
 
-                {/* Resource Context Card */}
                 {activeConversation.resource && (
                   <Link
                     to={`/resources/${activeConversation.resource.id}`}
-                    className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-[#1f2942] hover:bg-[#242f4c] border border-[#2d3a5a] text-xs transition-colors ml-2 max-w-[220px]"
+                    className="flex items-center space-x-2 px-3.5 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-xs transition-colors ml-2 max-w-[220px]"
                     title="View Resource Listing"
                   >
                     <ShoppingBag className="h-3.5 w-3.5 text-indigo-400 flex-shrink-0" />
-                    <span className="text-slate-200 truncate font-medium">
+                    <span className="text-slate-200 truncate font-semibold">
                       {activeConversation.resource.title}
                     </span>
                     <ExternalLink className="h-3 w-3 text-slate-400 flex-shrink-0" />
@@ -536,14 +526,14 @@ export default function Chat() {
 
               {/* Error Banner */}
               {error && (
-                <div className="mx-4 mt-2 p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-center space-x-2 text-rose-300 text-xs">
+                <div className="mx-4 mt-2 p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center space-x-2 text-rose-300 text-xs">
                   <AlertCircle className="h-4 w-4 flex-shrink-0" />
                   <span>{error}</span>
                 </div>
               )}
 
               {/* Messages Container */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3.5">
                 {loadingMessages ? (
                   <div className="flex flex-col items-center justify-center h-full space-y-2">
                     <RefreshCw className="h-6 w-6 text-indigo-400 animate-spin" />
@@ -551,12 +541,12 @@ export default function Chat() {
                   </div>
                 ) : messages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-center p-6 space-y-3">
-                    <div className="p-4 rounded-full bg-[#161d30] text-indigo-400 border border-[#242f4c]">
+                    <div className="p-4 rounded-3xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                       <MessageSquare className="h-8 w-8" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-slate-200">Start the conversation</p>
-                      <p className="text-xs text-slate-400 max-w-sm mt-1">
+                      <p className="text-sm font-bold text-white font-display">Start the conversation</p>
+                      <p className="text-xs text-slate-400 max-w-sm mt-1 leading-relaxed">
                         Coordinate meetup details, pickup location, or item questions securely with your exchange partner.
                       </p>
                     </div>
@@ -564,7 +554,6 @@ export default function Chat() {
                 ) : (
                   messages.map((msg, index) => {
                     const isMine = user && msg.sender_id === user.id;
-                    const showTime = true;
 
                     return (
                       <div
@@ -572,14 +561,14 @@ export default function Chat() {
                         className={`flex flex-col ${isMine ? 'items-end' : 'items-start'}`}
                       >
                         <div
-                          className={`max-w-[80%] sm:max-w-[70%] px-4 py-2.5 rounded-2xl shadow-sm text-sm break-words ${
+                          className={`max-w-[80%] sm:max-w-[70%] px-4 py-3 rounded-2xl shadow-sm text-xs break-words font-normal ${
                             isMine
-                              ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-br-none'
-                              : 'bg-[#1f2942] text-slate-100 border border-[#2d3a5a] rounded-bl-none'
+                              ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-br-none shadow-lg shadow-indigo-600/20'
+                              : 'bg-white/[0.04] text-slate-100 border border-white/[0.08] rounded-bl-none'
                           }`}
                         >
                           <p className="whitespace-pre-wrap leading-relaxed">{msg.message_text}</p>
-                          <div className={`flex items-center justify-end space-x-1 text-[10px] mt-1 ${
+                          <div className={`flex items-center justify-end space-x-1 text-[10px] mt-1.5 ${
                             isMine ? 'text-indigo-200/80' : 'text-slate-400'
                           }`}>
                             <span>{formatTime(msg.created_at)}</span>
@@ -600,7 +589,7 @@ export default function Chat() {
                 {/* Partner Typing Indicator */}
                 {partnerTyping && (
                   <div className="flex items-center space-x-2 text-xs text-indigo-400 italic">
-                    <div className="flex space-x-1 p-2 bg-[#1f2942] rounded-full border border-[#2d3a5a]">
+                    <div className="flex space-x-1 p-2 bg-white/[0.04] rounded-full border border-white/[0.08]">
                       <span className="h-1.5 w-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                       <span className="h-1.5 w-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                       <span className="h-1.5 w-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
@@ -613,7 +602,7 @@ export default function Chat() {
               </div>
 
               {/* Message Input Box */}
-              <div className="p-3 border-t border-[#242f4c] bg-[#161d30]">
+              <div className="p-3.5 border-t border-white/[0.06] bg-black/20">
                 <form onSubmit={handleSendMessage} className="flex flex-col space-y-1">
                   <div className="flex items-center space-x-2">
                     <input
@@ -623,12 +612,12 @@ export default function Chat() {
                       placeholder={`Message ${activeConversation.partner?.name || 'peer'}...`}
                       disabled={sending}
                       maxLength={2000}
-                      className="flex-1 bg-[#1f2942] border border-[#2d3a5a] rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition-colors disabled:opacity-50"
+                      className="flex-1 bg-black/40 border border-white/[0.08] rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition-colors disabled:opacity-50"
                     />
                     <button
                       type="submit"
                       disabled={!messageText.trim() || sending}
-                      className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-xl font-medium text-sm flex items-center space-x-1.5 shadow-md transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+                      className="px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white rounded-xl font-bold text-xs flex items-center space-x-1.5 shadow-md shadow-indigo-500/20 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
                     >
                       {sending ? (
                         <RefreshCw className="h-4 w-4 animate-spin" />
@@ -640,7 +629,6 @@ export default function Chat() {
                       )}
                     </button>
                   </div>
-                  {/* Character Counter */}
                   <div className="flex justify-between items-center px-1 text-[10px] text-slate-500">
                     <span>Press Enter to send</span>
                     <span className={messageText.length > 1800 ? 'text-amber-400 font-semibold' : ''}>
@@ -651,21 +639,20 @@ export default function Chat() {
               </div>
             </>
           ) : (
-            /* No conversation selected */
             <div className="flex flex-col items-center justify-center h-full text-center p-8 space-y-4">
-              <div className="p-5 rounded-full bg-[#161d30] text-indigo-400 border border-[#242f4c] shadow-inner">
+              <div className="p-5 rounded-3xl bg-white/[0.02] text-indigo-400 border border-white/[0.08] shadow-inner">
                 <MessageSquare className="h-12 w-12" />
               </div>
               <div className="max-w-md">
-                <h3 className="text-lg font-bold text-white">Select a conversation</h3>
-                <p className="text-sm text-slate-400 mt-1">
+                <h3 className="text-lg font-bold text-white font-display">Select a conversation</h3>
+                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
                   Choose a peer conversation from the list on the left to coordinate exchange details in real time.
                 </p>
               </div>
             </div>
           )}
         </div>
-      </div>
+      </GlassCard>
     </div>
   );
 }

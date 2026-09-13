@@ -37,6 +37,8 @@ import { QRCodeCanvas } from 'qrcode.react';
 import HandoverQrModal from '../components/HandoverQrModal';
 import QrHistoryModal from '../components/QrHistoryModal';
 import CampusMeetupMapModal from '../components/CampusMeetupMapModal';
+import GlassCard from '../components/ui/GlassCard';
+import SectionHeading from '../components/ui/SectionHeading';
 
 
 // ----------------------------------------------------
@@ -119,26 +121,26 @@ function HandoverVerificationSection({ req, currentUser, onVerified, onOpenHando
   if (isOwner) {
     if (isQrVerified) {
       return (
-        <div className="bg-emerald-950/20 border border-emerald-500/20 rounded-2xl p-4 flex items-center space-x-3 text-emerald-400 mt-4">
+        <div className="bg-emerald-950/25 border border-emerald-500/30 rounded-2xl p-4 flex items-center space-x-3 text-emerald-400 mt-4 shadow-sm">
           <CheckCircle2 className="h-5 w-5 flex-shrink-0 animate-bounce" />
           <div>
-            <h4 className="text-xs font-extrabold uppercase tracking-wider">Handover Verified!</h4>
-            <p className="text-[10px] text-slate-400 mt-0.5">Physical exchange verified successfully. You may complete the transaction.</p>
+            <h4 className="text-xs font-black uppercase tracking-wider font-display">Handover Verified!</h4>
+            <p className="text-[11px] text-slate-300 mt-0.5">Physical exchange verified successfully. You may complete the transaction.</p>
           </div>
         </div>
       );
     }
 
     return (
-      <div className="border-t border-[#242f4c]/40 pt-4 mt-4 space-y-3">
+      <div className="border-t border-white/10 pt-4 mt-4 space-y-3">
         <div className="flex items-center justify-between">
-          <h4 className="text-xs uppercase font-extrabold tracking-wider text-indigo-400">Exchange Handover</h4>
+          <h4 className="text-xs uppercase font-extrabold tracking-wider text-indigo-400 font-display">Exchange Handover</h4>
           <span className="text-[10px] font-semibold text-slate-400">
             Status: {isQrGenerated && !isQrExpired ? `Active (${countdown || '10m'})` : isQrExpired ? 'QR Expired' : 'Not Generated'}
           </span>
         </div>
 
-        <div className="bg-slate-900/60 border border-[#242f4c] rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="bg-[#090D18] border border-white/10 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-inner">
           <div className="space-y-1 text-center sm:text-left">
             <p className="text-xs font-bold text-slate-200">
               {isQrGenerated && !isQrExpired ? 'Handover QR Code Ready' : isQrExpired ? 'Handover QR Expired' : 'In-Person Handover Verification'}
@@ -155,7 +157,7 @@ function HandoverVerificationSection({ req, currentUser, onVerified, onOpenHando
           <div className="flex items-center space-x-2 flex-shrink-0">
             <button
               onClick={() => onOpenHandoverModal(req)}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-md shadow-indigo-600/10 flex items-center space-x-1.5"
+              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-lg shadow-indigo-600/20 flex items-center space-x-1.5 hover:scale-[1.02]"
             >
               <QrCode className="h-4 w-4" />
               <span>{isQrGenerated && !isQrExpired ? 'View / Present QR' : isQrExpired ? 'Regenerate QR' : 'Generate Handover QR'}</span>
@@ -170,11 +172,11 @@ function HandoverVerificationSection({ req, currentUser, onVerified, onOpenHando
   if (isRequester) {
     if (isQrVerified) {
       return (
-        <div className="bg-emerald-950/20 border border-emerald-500/20 rounded-2xl p-4 flex items-center space-x-3 text-emerald-400 mt-4">
+        <div className="bg-emerald-950/25 border border-emerald-500/30 rounded-2xl p-4 flex items-center space-x-3 text-emerald-400 mt-4 shadow-sm">
           <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
           <div>
-            <h4 className="text-xs font-extrabold uppercase tracking-wider">Handover Verified!</h4>
-            <p className="text-[10px] text-slate-400 mt-0.5">Physical handover verified successfully. Waiting for completion.</p>
+            <h4 className="text-xs font-black uppercase tracking-wider font-display">Handover Verified!</h4>
+            <p className="text-[11px] text-slate-300 mt-0.5">Physical handover verified successfully. Waiting for owner to finalize completion.</p>
           </div>
         </div>
       );
@@ -182,8 +184,8 @@ function HandoverVerificationSection({ req, currentUser, onVerified, onOpenHando
 
     if (isQrExpired) {
       return (
-        <div className="border-t border-[#242f4c]/40 pt-4 mt-4 space-y-3">
-          <div className="bg-slate-900/60 border border-rose-500/30 rounded-2xl p-4 flex items-center justify-between gap-3 text-rose-400">
+        <div className="border-t border-white/10 pt-4 mt-4 space-y-3">
+          <div className="bg-[#090D18] border border-rose-500/30 rounded-2xl p-4 flex items-center justify-between gap-3 text-rose-300">
             <div className="flex items-center space-x-2">
               <AlertTriangle className="h-4 w-4 text-rose-400 flex-shrink-0" />
               <span className="text-xs font-semibold">The handover QR has expired. Please ask the owner to regenerate it.</span>
@@ -194,15 +196,15 @@ function HandoverVerificationSection({ req, currentUser, onVerified, onOpenHando
     }
 
     return (
-      <div className="border-t border-[#242f4c]/40 pt-4 mt-4 space-y-3">
+      <div className="border-t border-white/10 pt-4 mt-4 space-y-3">
         <div className="flex items-center justify-between">
-          <h4 className="text-xs uppercase font-extrabold tracking-wider text-indigo-400">Exchange Handover</h4>
+          <h4 className="text-xs uppercase font-extrabold tracking-wider text-indigo-400 font-display">Exchange Handover</h4>
           <span className="text-[10px] font-semibold text-slate-400">
             Status: {isQrGenerated ? 'Ready to Scan' : 'Waiting for owner to generate QR'}
           </span>
         </div>
 
-        <div className="bg-slate-900/60 border border-[#242f4c] rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="bg-[#090D18] border border-white/10 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-inner">
           <div className="space-y-1 text-center sm:text-left">
             <p className="text-xs font-bold text-slate-200">Verify Physical Item Handover</p>
             <p className="text-[11px] text-slate-400">
@@ -212,7 +214,7 @@ function HandoverVerificationSection({ req, currentUser, onVerified, onOpenHando
 
           <button
             onClick={() => onOpenHandoverModal(req)}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wide cursor-pointer flex items-center space-x-1.5 shadow-md shadow-indigo-600/10 flex-shrink-0"
+            className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wide cursor-pointer flex items-center space-x-1.5 shadow-lg shadow-indigo-600/20 flex-shrink-0 hover:scale-[1.02]"
           >
             <Camera className="h-4 w-4" />
             <span>Scan Handover QR</span>
@@ -235,24 +237,23 @@ function CompletedReviewSection({ req, currentUser, reviews, onOpenReviewModal }
   
   if (!currentUser || (!isOwner && !isRequester)) return null;
 
-  // Find if current user has already submitted a review for this transaction
   const myReview = reviews && reviews.find(r => 
     Number(r.reviewer?.id || r.reviewer_id) === Number(currentUser.id)
   );
 
   if (myReview) {
     return (
-      <div className="bg-emerald-950/20 border border-emerald-500/20 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-4">
+      <div className="bg-emerald-950/20 border border-emerald-500/25 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-4">
         <div className="flex items-center space-x-3 text-emerald-400">
           <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
           <div>
-            <h4 className="text-xs font-extrabold uppercase tracking-wider">Review Submitted ✓</h4>
-            <p className="text-[10px] text-slate-400 mt-0.5">
+            <h4 className="text-xs font-black uppercase tracking-wider font-display">Review Submitted ✓</h4>
+            <p className="text-[11px] text-slate-300 mt-0.5">
               {myReview.review_text ? `"${myReview.review_text}"` : 'Thank you for rating your exchange partner.'}
             </p>
           </div>
         </div>
-        <div className="flex items-center space-x-1 bg-slate-900/80 px-3 py-1.5 rounded-xl border border-[#242f4c] flex-shrink-0">
+        <div className="flex items-center space-x-1 bg-[#090D18] px-3 py-1.5 rounded-xl border border-white/10 flex-shrink-0">
           {[1, 2, 3, 4, 5].map((star) => (
             <Star
               key={star}
@@ -268,7 +269,7 @@ function CompletedReviewSection({ req, currentUser, reviews, onOpenReviewModal }
   }
 
   return (
-    <div className="bg-slate-900/60 border border-[#242f4c] rounded-2xl p-4 sm:p-5 mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div className="bg-[#090D18] border border-white/10 rounded-2xl p-4 sm:p-5 mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-inner">
       <div className="space-y-1">
         <div className="flex items-center space-x-2 text-emerald-400">
           <CheckCircle2 className="h-4 w-4" />
@@ -280,7 +281,7 @@ function CompletedReviewSection({ req, currentUser, reviews, onOpenReviewModal }
 
       <button
         onClick={() => onOpenReviewModal(req)}
-        className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold px-4 py-2.5 rounded-xl text-xs flex items-center space-x-1.5 transition-all shadow-md shadow-amber-500/10 cursor-pointer flex-shrink-0 hover:scale-[1.02]"
+        className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black px-4 py-2.5 rounded-xl text-xs flex items-center space-x-1.5 transition-all shadow-lg shadow-amber-500/20 cursor-pointer flex-shrink-0 hover:scale-[1.02]"
       >
         <Star className="h-3.5 w-3.5 fill-slate-950 text-slate-950" />
         <span>Leave a Review</span>
@@ -353,13 +354,13 @@ function ReviewModal({ transaction, currentUser, onClose, onSuccess }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0d111c]/80 backdrop-blur-sm p-4 animate-fadeIn">
-      <div className="bg-[#161d30] border border-[#242f4c] rounded-3xl p-6 md:p-8 max-w-md w-full relative shadow-2xl space-y-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fadeIn">
+      <div className="bg-[#0F1424] border border-white/10 rounded-3xl p-6 md:p-8 max-w-md w-full relative shadow-2xl space-y-6">
         
         <button
           onClick={onClose}
           disabled={submitting}
-          className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors cursor-pointer disabled:opacity-50"
+          className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors cursor-pointer disabled:opacity-50 p-1.5 rounded-full hover:bg-white/10"
         >
           <X className="h-5 w-5" />
         </button>
@@ -367,10 +368,10 @@ function ReviewModal({ transaction, currentUser, onClose, onSuccess }) {
         {successInfo ? (
           <div className="text-center py-6 space-y-4">
             <CheckCircle2 className="h-12 w-12 text-emerald-400 mx-auto animate-bounce" />
-            <h3 className="text-xl font-bold text-white tracking-tight">Review Submitted ✓</h3>
+            <h3 className="text-xl font-bold text-white tracking-tight font-display">Review Submitted ✓</h3>
             <p className="text-xs text-slate-300">Thank you for rating your exchange partner!</p>
             {successInfo.reviewed_user?.trust_score !== undefined && (
-              <div className="bg-slate-900/60 border border-indigo-500/20 rounded-2xl p-4 text-xs text-slate-300 space-y-1">
+              <div className="bg-[#090D18] border border-indigo-500/20 rounded-2xl p-4 text-xs text-slate-300 space-y-1">
                 <span className="text-indigo-400 font-bold block uppercase tracking-wider text-[10px]">Recipient Trust Updated</span>
                 <span className="text-sm font-extrabold text-white">Trust Score: {Number(successInfo.reviewed_user.trust_score).toFixed(2)}</span>
               </div>
@@ -379,22 +380,22 @@ function ReviewModal({ transaction, currentUser, onClose, onSuccess }) {
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-1">
-              <h2 className="text-xl font-extrabold text-white tracking-tight">Leave a Review</h2>
+              <h2 className="text-xl font-extrabold text-white tracking-tight font-display">Leave a Review</h2>
               <p className="text-xs text-slate-400">
                 Rate your exchange experience with <span className="text-slate-200 font-semibold">{partnerName}</span> for <span className="text-indigo-300 font-semibold">{transaction.resource_title}</span>.
               </p>
             </div>
 
             {error && (
-              <div className="flex items-center space-x-2 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-xl px-4 py-2.5 text-xs">
-                <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+              <div className="flex items-center space-x-2 bg-rose-500/10 border border-rose-500/30 text-rose-300 rounded-2xl px-4 py-2.5 text-xs">
+                <AlertTriangle className="h-4 w-4 flex-shrink-0 text-rose-400" />
                 <span>{error}</span>
               </div>
             )}
 
             {/* Interactive 1-5 Star Rating */}
-            <div className="space-y-2 text-center bg-[#0d111c]/60 p-4 rounded-2xl border border-slate-800/80">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+            <div className="space-y-2 text-center bg-[#090D18] p-4 rounded-2xl border border-white/10">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block font-display">
                 Rate your experience
               </span>
               
@@ -422,7 +423,7 @@ function ReviewModal({ transaction, currentUser, onClose, onSuccess }) {
                 })}
               </div>
 
-              <div className="h-4 text-[11px] font-medium text-amber-300">
+              <div className="h-4 text-[11px] font-semibold text-amber-300">
                 {ratingLabels[hoverRating || rating] || 'Select 1 to 5 stars'}
               </div>
             </div>
@@ -440,7 +441,7 @@ function ReviewModal({ transaction, currentUser, onClose, onSuccess }) {
                 onChange={(e) => setReviewText(e.target.value.slice(0, 500))}
                 rows={3}
                 placeholder="How was the communication, item condition, and handover punctuality?"
-                className="w-full px-4 py-2.5 bg-[#0d111c]/90 border border-slate-700/60 focus:border-indigo-500/80 rounded-xl text-slate-100 placeholder-slate-500 outline-none text-xs resize-none transition-colors"
+                className="w-full px-4 py-2.5 bg-[#090D18] border border-white/10 focus:border-indigo-500 rounded-2xl text-slate-100 placeholder-slate-500 outline-none text-xs resize-none transition-colors"
               />
             </div>
 
@@ -450,14 +451,14 @@ function ReviewModal({ transaction, currentUser, onClose, onSuccess }) {
                 type="button"
                 onClick={onClose}
                 disabled={submitting}
-                className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 rounded-xl text-xs transition-colors cursor-pointer disabled:opacity-50"
+                className="flex-1 bg-white/5 hover:bg-white/10 text-slate-300 font-semibold py-2.5 rounded-xl text-xs transition-colors cursor-pointer disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={submitting || !rating}
-                className="flex-1 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold py-2.5 rounded-xl text-xs transition-all shadow-md shadow-indigo-600/20 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center space-x-1.5"
+                className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-2.5 rounded-xl text-xs transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center space-x-1.5"
               >
                 {submitting ? (
                   <>
@@ -656,12 +657,12 @@ export default function MyRequests() {
 
   const getStatusBadge = (status) => {
     switch (status.toUpperCase()) {
-      case 'PENDING': return 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
-      case 'ACCEPTED': return 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20';
-      case 'REJECTED': return 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
-      case 'CANCELLED': return 'bg-slate-700/20 text-slate-400 border border-slate-700/60';
-      case 'COMPLETED': return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
-      default: return 'bg-slate-500/10 text-slate-400 border border-slate-500/20';
+      case 'PENDING': return 'bg-amber-500/15 text-amber-300 border border-amber-500/30';
+      case 'ACCEPTED': return 'bg-indigo-500/15 text-indigo-300 border border-indigo-500/30';
+      case 'REJECTED': return 'bg-rose-500/15 text-rose-300 border border-rose-500/30';
+      case 'CANCELLED': return 'bg-slate-700/30 text-slate-400 border border-slate-700/60';
+      case 'COMPLETED': return 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30';
+      default: return 'bg-slate-500/15 text-slate-400 border border-slate-500/20';
     }
   };
 
@@ -690,12 +691,15 @@ export default function MyRequests() {
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">Exchange Requests</h1>
-          <p className="text-sm text-slate-400 mt-1">Review requests sent to you or follow up on listings you requested from others.</p>
+          <SectionHeading
+            badge="Exchanges"
+            title="Exchange Requests"
+            subtitle="Manage peer handovers, coordinate meetings, and approve campus requests."
+          />
         </div>
         <button
           onClick={() => setShowQrHistory(true)}
-          className="inline-flex items-center space-x-2 px-4 py-2.5 bg-[#161d30] hover:bg-[#1e2742] text-indigo-400 hover:text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer self-start sm:self-auto"
+          className="inline-flex items-center space-x-2 px-4 py-2.5 bg-[#090D18] hover:bg-white/10 text-indigo-300 hover:text-white border border-indigo-500/30 rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer self-start sm:self-auto hover:scale-[1.02]"
         >
           <History className="h-4 w-4" />
           <span>QR Handover History</span>
@@ -703,12 +707,12 @@ export default function MyRequests() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-[#242f4c] pb-px">
+      <div className="flex border-b border-white/10 pb-px overflow-x-auto">
         <button
           onClick={() => setActiveTab('incoming')}
-          className={`flex items-center space-x-2 text-sm px-5 py-2.5 border-b-2 font-semibold transition-all duration-200 -mb-px cursor-pointer ${
+          className={`flex items-center space-x-2 text-xs sm:text-sm px-5 py-2.5 border-b-2 font-bold transition-all duration-200 -mb-px cursor-pointer whitespace-nowrap ${
             activeTab === 'incoming'
-              ? 'border-indigo-500 text-indigo-400 bg-indigo-500/5'
+              ? 'border-indigo-500 text-indigo-300 bg-indigo-500/10 rounded-t-xl'
               : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
@@ -717,9 +721,9 @@ export default function MyRequests() {
         </button>
         <button
           onClick={() => setActiveTab('outgoing')}
-          className={`flex items-center space-x-2 text-sm px-5 py-2.5 border-b-2 font-semibold transition-all duration-200 -mb-px cursor-pointer ${
+          className={`flex items-center space-x-2 text-xs sm:text-sm px-5 py-2.5 border-b-2 font-bold transition-all duration-200 -mb-px cursor-pointer whitespace-nowrap ${
             activeTab === 'outgoing'
-              ? 'border-indigo-500 text-indigo-400 bg-indigo-500/5'
+              ? 'border-indigo-500 text-indigo-300 bg-indigo-500/10 rounded-t-xl'
               : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
@@ -728,10 +732,10 @@ export default function MyRequests() {
         </button>
       </div>
 
-      <div className="bg-[#161d30]/60 border border-[#242f4c] rounded-2xl overflow-hidden shadow-lg">
+      <GlassCard glowVariant="none" elevation="flat" className="p-0 border border-white/10 overflow-hidden">
         {activeTab === 'incoming' ? (
           incoming.length > 0 ? (
-            <div className="divide-y divide-[#242f4c]">
+            <div className="divide-y divide-white/5">
               {incoming.map(req => {
                 const isOwner = user && Number(user.id) === Number(req.owner_id);
                 const isAccepted = req.status.toUpperCase() === 'ACCEPTED';
@@ -739,21 +743,21 @@ export default function MyRequests() {
                 const isVerified = verifiedList[req.id] || isCompleted;
 
                 return (
-                  <div key={req.id} className="p-6 flex flex-col space-y-4 hover:bg-[#161d30]/80 transition-colors">
+                  <div key={req.id} className="p-6 flex flex-col space-y-4 hover:bg-white/[0.02] transition-colors">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                       <div className="space-y-1.5 flex-grow">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded bg-slate-900 border border-slate-700/60 text-indigo-300">
+                          <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/25 text-indigo-300">
                             {req.resource_exchange_type}
                           </span>
                           <span className="text-xs text-slate-400">
-                            Requested by <span className="text-slate-300 font-semibold">{req.requester_name}</span> ({req.requester_email})
+                            Requested by <span className="text-slate-200 font-semibold">{req.requester_name}</span> ({req.requester_email})
                           </span>
                           <span className="text-[10px] text-slate-500">
                             • {new Date(req.created_at).toLocaleDateString()}
                           </span>
                         </div>
-                        <h3 className="font-bold text-slate-200 text-base">{req.resource_title}</h3>
+                        <h3 className="font-bold text-slate-100 text-base font-display">{req.resource_title}</h3>
                         <div className="flex flex-wrap items-center gap-3">
                           <p className="text-xs text-indigo-300 font-semibold flex items-center space-x-1">
                             <span>Terms: {renderTerms(req)}</span>
@@ -762,7 +766,7 @@ export default function MyRequests() {
                             <button
                               type="button"
                               onClick={() => setMapModalLocation({ location: req.resource_meetup_location, title: req.resource_title })}
-                              className="inline-flex items-center gap-1 text-[11px] text-slate-300 hover:text-indigo-300 bg-slate-900/60 hover:bg-slate-800/80 px-2.5 py-0.5 rounded-lg border border-slate-700/60 transition-colors cursor-pointer"
+                              className="inline-flex items-center gap-1.5 text-[11px] text-slate-300 hover:text-indigo-300 bg-[#090D18] hover:bg-white/10 px-3 py-1 rounded-xl border border-white/10 transition-colors cursor-pointer shadow-sm"
                             >
                               <MapPin className="h-3 w-3 text-indigo-400" />
                               <span>Meetup: <strong>{req.resource_meetup_location}</strong></span>
@@ -773,7 +777,7 @@ export default function MyRequests() {
                       </div>
 
                       <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-between md:justify-end">
-                        <span className={`text-[10px] font-extrabold uppercase px-3 py-1 rounded-full ${getStatusBadge(req.status)}`}>
+                        <span className={`text-[10px] font-black uppercase px-3 py-1 rounded-full shadow-sm ${getStatusBadge(req.status)}`}>
                           {req.status}
                         </span>
 
@@ -785,14 +789,14 @@ export default function MyRequests() {
                               <>
                                 <button
                                   onClick={() => handleAccept(req.id)}
-                                  className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center space-x-1 transition-colors cursor-pointer"
+                                  className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center space-x-1 transition-all cursor-pointer shadow-md shadow-emerald-600/20 hover:scale-[1.02]"
                                 >
                                   <CheckCircle2 className="h-3.5 w-3.5" />
                                   <span>Accept</span>
                                 </button>
                                 <button
                                   onClick={() => handleReject(req.id)}
-                                  className="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold flex items-center space-x-1 transition-colors cursor-pointer"
+                                  className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold flex items-center space-x-1 transition-all cursor-pointer shadow-md shadow-rose-600/20 hover:scale-[1.02]"
                                 >
                                   <XCircle className="h-3.5 w-3.5" />
                                   <span>Reject</span>
@@ -803,7 +807,7 @@ export default function MyRequests() {
                             {isAccepted && isVerified && (
                               <button
                                 onClick={() => handleComplete(req.id)}
-                                className="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center space-x-1 transition-colors cursor-pointer shadow-md shadow-indigo-600/15"
+                                className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold flex items-center space-x-1.5 transition-all cursor-pointer shadow-lg shadow-indigo-600/25 hover:scale-[1.02]"
                               >
                                 <Sparkles className="h-3.5 w-3.5 text-amber-300 animate-pulse" />
                                 <span>Complete Transaction</span>
@@ -812,7 +816,7 @@ export default function MyRequests() {
 
                             <button
                               onClick={() => handleStartChat(req)}
-                              className="px-3 py-1.5 rounded-lg bg-[#1f2942] hover:bg-[#242f4c] text-slate-300 hover:text-white border border-[#2d3a5a] text-xs font-semibold flex items-center space-x-1.5 transition-colors cursor-pointer"
+                              className="px-3.5 py-1.5 rounded-xl bg-[#090D18] hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 text-xs font-semibold flex items-center space-x-1.5 transition-colors cursor-pointer shadow-sm"
                               title="Chat with requester"
                             >
                               <MessageSquare className="h-3.5 w-3.5 text-indigo-400" />
@@ -849,11 +853,11 @@ export default function MyRequests() {
               })}
             </div>
           ) : (
-            <div className="text-center py-16 text-slate-400 font-medium">No incoming requests received.</div>
+            <div className="text-center py-20 text-slate-400 font-medium">No incoming requests received yet.</div>
           )
         ) : (
           outgoing.length > 0 ? (
-            <div className="divide-y divide-[#242f4c]">
+            <div className="divide-y divide-white/5">
               {outgoing.map(req => {
                 const isRequester = user && Number(user.id) === Number(req.requester_id);
                 const isAccepted = req.status.toUpperCase() === 'ACCEPTED';
@@ -861,28 +865,28 @@ export default function MyRequests() {
                 const isVerified = verifiedList[req.id] || isCompleted;
 
                 return (
-                  <div key={req.id} className="p-6 flex flex-col space-y-4 hover:bg-[#161d30]/80 transition-colors">
+                  <div key={req.id} className="p-6 flex flex-col space-y-4 hover:bg-white/[0.02] transition-colors">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                       <div className="space-y-1.5 flex-grow">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded bg-slate-900 border border-slate-700/60 text-indigo-300">
+                          <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/25 text-indigo-300">
                             {req.resource_exchange_type}
                           </span>
                           <span className="text-xs text-slate-400">
-                            Owner: <span className="text-slate-300 font-semibold">{req.owner_name}</span> ({req.owner_email})
+                            Owner: <span className="text-slate-200 font-semibold">{req.owner_name}</span> ({req.owner_email})
                           </span>
                           <span className="text-[10px] text-slate-500">
                             • {new Date(req.created_at).toLocaleDateString()}
                           </span>
                         </div>
-                        <h3 className="font-bold text-slate-200 text-base">{req.resource_title}</h3>
+                        <h3 className="font-bold text-slate-100 text-base font-display">{req.resource_title}</h3>
                         <div className="flex flex-wrap items-center gap-3">
                           <p className="text-xs text-indigo-300 font-semibold">Terms: {renderTerms(req)}</p>
                           {req.resource_meetup_location && (
                             <button
                               type="button"
                               onClick={() => setMapModalLocation({ location: req.resource_meetup_location, title: req.resource_title })}
-                              className="inline-flex items-center gap-1 text-[11px] text-slate-300 hover:text-indigo-300 bg-slate-900/60 hover:bg-slate-800/80 px-2.5 py-0.5 rounded-lg border border-slate-700/60 transition-colors cursor-pointer"
+                              className="inline-flex items-center gap-1.5 text-[11px] text-slate-300 hover:text-indigo-300 bg-[#090D18] hover:bg-white/10 px-3 py-1 rounded-xl border border-white/10 transition-colors cursor-pointer shadow-sm"
                             >
                               <MapPin className="h-3 w-3 text-indigo-400" />
                               <span>Meetup: <strong>{req.resource_meetup_location}</strong></span>
@@ -893,7 +897,7 @@ export default function MyRequests() {
                       </div>
 
                       <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-between md:justify-end">
-                        <span className={`text-[10px] font-extrabold uppercase px-3 py-1 rounded-full ${getStatusBadge(req.status)}`}>
+                        <span className={`text-[10px] font-black uppercase px-3 py-1 rounded-full shadow-sm ${getStatusBadge(req.status)}`}>
                           {req.status}
                         </span>
 
@@ -904,7 +908,7 @@ export default function MyRequests() {
                             {req.status.toUpperCase() === 'PENDING' && (
                               <button
                                 onClick={() => handleCancel(req.id)}
-                                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-450 hover:text-rose-400 text-xs font-bold border border-slate-700/60 transition-colors cursor-pointer"
+                                className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 text-xs font-bold border border-white/10 transition-colors cursor-pointer"
                               >
                                 Cancel Request
                               </button>
@@ -913,7 +917,7 @@ export default function MyRequests() {
                             {isAccepted && isVerified && (
                               <button
                                 onClick={() => handleComplete(req.id)}
-                                className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center space-x-1 transition-colors cursor-pointer shadow-md shadow-emerald-600/15"
+                                className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold flex items-center space-x-1.5 transition-all cursor-pointer shadow-lg shadow-indigo-600/25 hover:scale-[1.02]"
                               >
                                 <Sparkles className="h-3.5 w-3.5 text-amber-300 animate-bounce" />
                                 <span>Complete Transaction</span>
@@ -922,7 +926,7 @@ export default function MyRequests() {
 
                             <button
                               onClick={() => handleStartChat(req)}
-                              className="px-3 py-1.5 rounded-lg bg-[#1f2942] hover:bg-[#242f4c] text-slate-300 hover:text-white border border-[#2d3a5a] text-xs font-semibold flex items-center space-x-1.5 transition-colors cursor-pointer"
+                              className="px-3.5 py-1.5 rounded-xl bg-[#090D18] hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 text-xs font-semibold flex items-center space-x-1.5 transition-colors cursor-pointer shadow-sm"
                               title="Chat with owner"
                             >
                               <MessageSquare className="h-3.5 w-3.5 text-indigo-400" />
@@ -959,10 +963,10 @@ export default function MyRequests() {
               })}
             </div>
           ) : (
-            <div className="text-center py-16 text-slate-400 font-medium">You have not submitted any exchange requests.</div>
+            <div className="text-center py-20 text-slate-400 font-medium">You have not submitted any exchange requests.</div>
           )
         )}
-      </div>
+      </GlassCard>
 
       {/* Enhanced Handover QR Modal for Owner & Requester (M16) */}
       {activeHandoverTx && (

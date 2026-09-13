@@ -36,7 +36,7 @@ const db = require('../config/database');
  * @param {object} options { limit: number, excludeIds: Array<number> }
  */
 const getPersonalizedRecommendations = async (userId, options = {}) => {
-  const limit = Math.max(parseInt(options.limit, 10) || 6, 1);
+  const limit = Math.max(parseInt(options.limit, 10) || 12, 1);
   const excludeIds = Array.isArray(options.excludeIds) ? options.excludeIds.map(Number).filter(Boolean) : [];
 
   // If no user ID provided or guest, return cold-start campus recommendations
@@ -221,15 +221,12 @@ const getPersonalizedRecommendations = async (userId, options = {}) => {
     };
   });
 
-  // 4. Sort descending by score, tie-break by popularity and recency
+  // 4. Sort descending by score, tie-break by recency (ID descending)
   scoredItems.sort((a, b) => {
     if (b.recommendation_metadata.match_score !== a.recommendation_metadata.match_score) {
       return b.recommendation_metadata.match_score - a.recommendation_metadata.match_score;
     }
-    if (b.popularity_count !== a.popularity_count) {
-      return b.popularity_count - a.popularity_count;
-    }
-    return new Date(b.created_at) - new Date(a.created_at);
+    return b.id - a.id;
   });
 
   // Return top N items
@@ -342,7 +339,7 @@ const getSimilarResources = async (resourceId, userId = null, options = {}) => {
     return [];
   }
 
-  const limit = Math.max(parseInt(options.limit, 10) || 4, 1);
+  const limit = Math.max(parseInt(options.limit, 10) || 20, 1);
 
   // 1. Fetch Target Resource Metadata
   const [targetRows] = await db.query(
@@ -396,7 +393,8 @@ const getSimilarResources = async (resourceId, userId = null, options = {}) => {
     params.push(userId);
   }
 
-  sql += ` LIMIT 30`;
+  sql += ` ORDER BY (r.category_id = ?) DESC, r.created_at DESC LIMIT 50`;
+  params.push(target.category_id);
 
   const [candidates] = await db.query(sql, params);
 

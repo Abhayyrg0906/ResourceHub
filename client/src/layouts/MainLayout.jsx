@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { 
   BookOpen, 
   User, 
@@ -13,7 +13,11 @@ import {
   LogOut,
   GraduationCap,
   MessageSquare,
-  Heart
+  Heart,
+  ShieldCheck,
+  ChevronRight,
+  Search,
+  Sparkles
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getUnreadCount } from '../services/notificationService';
@@ -22,6 +26,7 @@ export default function MainLayout() {
   const [isOpen, setIsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useAuth();
 
   const fetchUnread = useCallback(async () => {
@@ -41,7 +46,6 @@ export default function MainLayout() {
 
     const handleUpdate = () => fetchUnread();
     window.addEventListener('notificationsUpdated', handleUpdate);
-
     const interval = setInterval(fetchUnread, 30000);
 
     return () => {
@@ -50,12 +54,17 @@ export default function MainLayout() {
     };
   }, [fetchUnread]);
 
+  // Close mobile drawer on route navigation
+  useEffect(() => {
+    setIsOpen(false);
+  }, [location.pathname]);
+
   const baseNavItems = [
     { name: 'Marketplace', path: '/resources', icon: BookOpen },
     { name: 'Dashboard', path: '/dashboard', icon: User },
     { name: 'Wishlist', path: '/wishlist', icon: Heart },
     { name: 'Messages', path: '/chat', icon: MessageSquare },
-    { name: 'Add Resource', path: '/resources/create', icon: PlusCircle },
+    { name: 'Add Listing', path: '/resources/create', icon: PlusCircle },
     { name: 'My Listings', path: '/my-listings', icon: FolderHeart },
     { name: 'History', path: '/history', icon: History },
   ];
@@ -64,32 +73,142 @@ export default function MainLayout() {
     ? [...baseNavItems, { name: 'Admin', path: '/admin', icon: ShieldAlert }]
     : baseNavItems;
 
+  const trustScore = user?.trust_score !== undefined ? Math.round(Number(user.trust_score)) : 100;
+
   return (
-    <div className="min-h-screen flex flex-col bg-[#0d111c] text-slate-100 selection:bg-indigo-500 selection:text-white">
-      {/* Top Navbar */}
-      <nav className="sticky top-0 z-40 bg-[#161d30]/90 backdrop-blur-md border-b border-[#242f4c] shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center">
-              <Link to="/" className="flex items-center space-x-2 group">
-                <GraduationCap className="h-8 w-8 text-indigo-400 group-hover:text-indigo-300 transition-colors duration-300" />
-                <span className="text-xl font-extrabold tracking-wider bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent group-hover:opacity-95">
+    <div className="min-h-screen flex flex-col bg-[#080A12] text-[#F8FAFC] selection:bg-[#7C3AED] selection:text-white">
+      
+      {/* Floating Glass Navbar */}
+      <header className="sticky top-0 z-50 px-4 sm:px-6 lg:px-8 pt-3 pb-2">
+        <nav className="max-w-7xl mx-auto glass-panel-elevated rounded-2xl sm:rounded-3xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] transition-all">
+          <div className="px-4 sm:px-6 flex items-center justify-between h-16">
+            
+            {/* Left: Brand Logo */}
+            <div className="flex items-center space-x-3">
+              <Link to="/" className="flex items-center space-x-2.5 group">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-blue-600 p-0.5 shadow-lg shadow-purple-600/30 group-hover:shadow-purple-600/50 transition-all duration-300">
+                  <div className="w-full h-full rounded-2xl bg-[#080A12] flex items-center justify-center">
+                    <GraduationCap className="h-5 w-5 text-indigo-400 group-hover:scale-110 transition-transform" />
+                  </div>
+                </div>
+                <span className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-indigo-100 to-purple-300 bg-clip-text text-transparent font-heading">
                   ResourceHub
                 </span>
               </Link>
             </div>
 
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex space-x-1 items-center">
+            {/* Middle: Desktop Pill Navigation */}
+            <div className="hidden lg:flex items-center space-x-1 bg-[#0a0d18]/60 p-1.5 rounded-2xl border border-white/5">
               {navItems.map((item) => (
                 <NavLink
                   key={item.name}
                   to={item.path}
                   className={({ isActive }) =>
-                    `flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
+                    `flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold tracking-wide transition-all duration-300 ${
                       isActive
-                        ? 'bg-indigo-600/20 text-indigo-300 border-b-2 border-indigo-500 rounded-b-none'
-                        : 'text-slate-300 hover:bg-[#1f2942] hover:text-white'
+                        ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-600/30 border border-purple-400/30'
+                        : 'text-slate-300 hover:text-white hover:bg-white/5'
+                    }`
+                  }
+                >
+                  <item.icon className="h-3.5 w-3.5" />
+                  <span>{item.name}</span>
+                </NavLink>
+              ))}
+            </div>
+
+            {/* Right: Notification & User Profile Pill */}
+            <div className="hidden md:flex items-center space-x-3">
+              
+              {/* Notification Bell */}
+              <Link
+                to="/notifications"
+                className="relative w-10 h-10 rounded-2xl bg-[#111528] border border-white/10 hover:border-indigo-500/40 flex items-center justify-center text-slate-300 hover:text-white transition-all shadow-sm"
+                title="Notifications"
+              >
+                <Bell className="h-4 w-4" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-pink-500 text-white text-[10px] font-extrabold flex items-center justify-center shadow-lg shadow-pink-500/50 animate-pulse">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </Link>
+
+              {/* User Profile Pill */}
+              {user ? (
+                <div className="flex items-center space-x-2 bg-[#111528] p-1.5 pr-3 rounded-2xl border border-white/10">
+                  <Link
+                    to="/profile"
+                    className="flex items-center space-x-2 group"
+                  >
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-xs text-white shadow-sm">
+                      {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                    </div>
+                    <div className="text-left leading-tight hidden xl:block">
+                      <p className="text-xs font-bold text-white group-hover:text-indigo-300 transition-colors truncate max-w-[100px]">
+                        {user.name || 'Student'}
+                      </p>
+                      <div className="flex items-center space-x-1 text-[10px] text-emerald-400 font-semibold">
+                        <ShieldCheck className="h-3 w-3" />
+                        <span>{trustScore}% Trust</span>
+                      </div>
+                    </div>
+                  </Link>
+
+                  <button
+                    onClick={logout}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors ml-1 cursor-pointer"
+                    title="Sign Out"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <Link
+                  to="/login"
+                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-md shadow-indigo-600/30"
+                >
+                  Sign In
+                </Link>
+              )}
+            </div>
+
+            {/* Mobile Menu Button */}
+            <div className="flex lg:hidden items-center space-x-2">
+              <Link
+                to="/notifications"
+                className="relative w-9 h-9 rounded-xl bg-[#111528] border border-white/10 flex items-center justify-center text-slate-300"
+              >
+                <Bell className="h-4 w-4" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-pink-500 text-white text-[9px] font-bold flex items-center justify-center">
+                    {unreadCount}
+                  </span>
+                )}
+              </Link>
+              
+              <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-10 h-10 rounded-2xl bg-[#111528] border border-white/10 flex items-center justify-center text-slate-200 hover:text-white"
+              >
+                {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </button>
+            </div>
+
+          </div>
+
+          {/* Mobile Drawer Navigation */}
+          {isOpen && (
+            <div className="lg:hidden px-4 pt-2 pb-5 border-t border-white/10 space-y-2 bg-[#080A12]/95 backdrop-blur-2xl rounded-b-2xl animate-fade-in">
+              {navItems.map((item) => (
+                <NavLink
+                  key={item.name}
+                  to={item.path}
+                  className={({ isActive }) =>
+                    `flex items-center space-x-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                      isActive
+                        ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white'
+                        : 'text-slate-300 hover:bg-white/5'
                     }`
                   }
                 >
@@ -97,178 +216,61 @@ export default function MainLayout() {
                   <span>{item.name}</span>
                 </NavLink>
               ))}
-            </div>
 
-            {/* Right Buttons */}
-            <div className="hidden md:flex items-center space-x-4">
-              <Link 
-                to="/wishlist" 
-                title="My Wishlist"
-                className="relative p-1.5 rounded-full text-slate-300 hover:bg-[#1f2942] hover:text-rose-400 transition-colors duration-300 flex items-center"
-              >
-                <Heart className="h-5 w-5" />
-              </Link>
-
-              <Link 
-                to="/chat" 
-                title="Messages"
-                className="relative p-1.5 rounded-full text-slate-300 hover:bg-[#1f2942] hover:text-white transition-colors duration-300 flex items-center"
-              >
-                <MessageSquare className="h-5 w-5" />
-              </Link>
-
-              <Link 
-                to="/notifications" 
-                title={unreadCount > 0 ? `${unreadCount} unread notifications` : "Notifications"}
-                className="relative p-1.5 rounded-full text-slate-300 hover:bg-[#1f2942] hover:text-white transition-colors duration-300 flex items-center"
-              >
-                <Bell className="h-5 w-5" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-pink-600 rounded-full ring-2 ring-[#0d111c] shadow-sm animate-pulse">
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </span>
-                )}
-              </Link>
-
-              <Link to="/profile" className="flex items-center space-x-2 p-1.5 rounded-lg text-slate-300 hover:bg-[#1f2942] hover:text-white transition-colors duration-300">
-                <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center font-bold text-white shadow-md">
-                  {user && user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+              {user && (
+                <div className="pt-3 mt-3 border-t border-white/10 flex items-center justify-between px-2">
+                  <Link to="/profile" className="flex items-center space-x-2">
+                    <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center font-bold text-xs text-white">
+                      {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-white">{user.name}</p>
+                      <p className="text-[10px] text-emerald-400">{trustScore}% Trust Score</p>
+                    </div>
+                  </Link>
+                  <button
+                    onClick={logout}
+                    className="flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                    <span>Log Out</span>
+                  </button>
                 </div>
-              </Link>
-
-              <button 
-                onClick={() => {
-                  logout();
-                  navigate('/login');
-                }} 
-                className="flex items-center space-x-1 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white bg-[#1f2942]/60 hover:bg-rose-600/20 hover:text-rose-300 border border-slate-600/30 rounded-lg transition-all duration-300"
-              >
-                <LogOut className="h-3.5 w-3.5" />
-                <span>Logout</span>
-              </button>
+              )}
             </div>
+          )}
+        </nav>
+      </header>
 
-            {/* Mobile menu button */}
-            <div className="md:hidden flex items-center space-x-3">
-              <Link 
-                to="/wishlist" 
-                className="relative p-1.5 text-slate-300 hover:text-rose-400 flex items-center"
-                title="Wishlist"
-              >
-                <Heart className="h-5 w-5" />
-              </Link>
-
-              <Link 
-                to="/chat" 
-                className="relative p-1.5 text-slate-300 flex items-center"
-                title="Messages"
-              >
-                <MessageSquare className="h-5 w-5" />
-              </Link>
-
-              <Link 
-                to="/notifications" 
-                className="relative p-1.5 text-slate-300 flex items-center"
-              >
-                <Bell className="h-5 w-5" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-pink-600 rounded-full ring-2 ring-[#0d111c]">
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </span>
-                )}
-              </Link>
-
-              <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="inline-flex items-center justify-center p-2 rounded-md text-slate-400 hover:text-white hover:bg-[#1f2942] focus:outline-none"
-              >
-                {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile Menu */}
-        {isOpen && (
-          <div className="md:hidden bg-[#161d30] border-b border-[#242f4c] animate-fadeIn">
-            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-              {navItems.map((item) => (
-                <NavLink
-                  key={item.name}
-                  to={item.path}
-                  onClick={() => setIsOpen(false)}
-                  className={({ isActive }) =>
-                    `flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium ${
-                      isActive
-                        ? 'bg-indigo-600/30 text-indigo-300'
-                        : 'text-slate-300 hover:bg-[#1f2942] hover:text-white'
-                    }`
-                  }
-                >
-                  <item.icon className="h-5 w-5" />
-                  <span>{item.name}</span>
-                </NavLink>
-              ))}
-              <NavLink
-                to="/notifications"
-                onClick={() => setIsOpen(false)}
-                className="flex items-center justify-between px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:bg-[#1f2942]"
-              >
-                <div className="flex items-center space-x-2">
-                  <Bell className="h-5 w-5" />
-                  <span>Notifications</span>
-                </div>
-                {unreadCount > 0 && (
-                  <span className="px-2 py-0.5 text-xs font-bold text-white bg-pink-600 rounded-full">
-                    {unreadCount}
-                  </span>
-                )}
-              </NavLink>
-              <NavLink
-                to="/profile"
-                onClick={() => setIsOpen(false)}
-                className="flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:bg-[#1f2942]"
-              >
-                <User className="h-5 w-5" />
-                <span>My Profile</span>
-              </NavLink>
-              <button
-                onClick={() => {
-                  setIsOpen(false);
-                  logout();
-                  navigate('/login');
-                }}
-                className="w-full text-left flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium text-rose-400 hover:bg-rose-500/10"
-              >
-                <LogOut className="h-5 w-5" />
-                <span>Logout</span>
-              </button>
-            </div>
-          </div>
-        )}
-      </nav>
-
-      {/* Main Content Area */}
-      <main className="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Main Page Body */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <Outlet />
       </main>
 
-      {/* Footer */}
-      <footer className="bg-[#0b0e17] border-t border-[#1f293d] py-8 mt-auto text-slate-400">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between">
-            <div className="flex items-center space-x-2 mb-4 md:mb-0">
-              <GraduationCap className="h-6 w-6 text-indigo-400" />
-              <span className="font-bold text-slate-200">ResourceHub</span>
+      {/* Futuristic Glass Footer */}
+      <footer className="mt-auto border-t border-white/10 bg-[#080A12]/80 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center shadow-md shadow-purple-600/30">
+                <GraduationCap className="h-4 w-4 text-white" />
+              </div>
+              <div>
+                <p className="text-base font-extrabold text-white font-heading">ResourceHub</p>
+                <p className="text-xs text-slate-400">Campus Student Resource & Exchange Platform</p>
+              </div>
             </div>
-            <div className="flex space-x-6 text-sm mb-4 md:mb-0">
-              <Link to="/resources" className="hover:text-indigo-400 transition-colors">Marketplace</Link>
-              <Link to="/about" className="hover:text-indigo-400 transition-colors">About Sustainability</Link>
-              <Link to="/admin" className="hover:text-indigo-400 transition-colors">Administration</Link>
+
+            <div className="flex flex-wrap items-center justify-center gap-6 text-xs text-slate-400 font-medium">
+              <Link to="/resources" className="hover:text-indigo-300 transition-colors">Marketplace</Link>
+              <Link to="/dashboard" className="hover:text-indigo-300 transition-colors">Student Dashboard</Link>
+              <Link to="/wishlist" className="hover:text-indigo-300 transition-colors">Wishlist</Link>
+              <Link to="/history" className="hover:text-indigo-300 transition-colors">Exchange History</Link>
             </div>
-            <div className="text-xs">
-              &copy; {new Date().getFullYear()} ResourceHub. Empowering smart campus sharing & sustainability.
-            </div>
+
+            <p className="text-xs text-slate-500 text-center md:text-right">
+              &copy; {new Date().getFullYear()} ResourceHub. Built for students.
+            </p>
           </div>
         </div>
       </footer>

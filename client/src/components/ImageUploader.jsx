@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, X, Star, Image as ImageIcon, Link as LinkIcon, AlertCircle, Loader2 } from 'lucide-react';
+import { Upload, X, Star, Image as ImageIcon, Link as LinkIcon, AlertCircle, Loader2, Sparkles } from 'lucide-react';
 import { uploadImages } from '../services/resourceService';
 
 export default function ImageUploader({ images = [], onChange, maxImages = 5 }) {
@@ -62,7 +62,6 @@ export default function ImageUploader({ images = [], onChange, maxImages = 5 }) 
         }));
 
         const updated = [...normalizedImages, ...newUploaded];
-        // Ensure at least one image is primary
         if (!updated.some(img => img.is_primary) && updated.length > 0) {
           updated[0].is_primary = true;
         }
@@ -141,21 +140,21 @@ export default function ImageUploader({ images = [], onChange, maxImages = 5 }) 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <label className="block text-sm font-semibold text-slate-300">
+        <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider font-display">
           Resource Images ({normalizedImages.length} / {maxImages})
         </label>
         <button
           type="button"
           onClick={() => setShowUrlInput(!showUrlInput)}
-          className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center space-x-1 transition-colors"
+          className="text-xs text-indigo-400 hover:text-indigo-300 font-medium flex items-center space-x-1.5 transition-colors cursor-pointer"
         >
           <LinkIcon className="h-3 w-3" />
-          <span>{showUrlInput ? 'Hide URL input' : 'Add via URL'}</span>
+          <span>{showUrlInput ? 'Hide Web URL' : 'Add via Direct URL'}</span>
         </button>
       </div>
 
       {error && (
-        <div className="flex items-center space-x-2 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-xl px-3 py-2 text-xs animate-fadeIn">
+        <div className="flex items-center space-x-2 bg-rose-500/10 border border-rose-500/30 text-rose-300 rounded-2xl px-4 py-3 text-xs animate-fadeIn">
           <AlertCircle className="h-4 w-4 flex-shrink-0" />
           <span>{error}</span>
         </div>
@@ -163,21 +162,21 @@ export default function ImageUploader({ images = [], onChange, maxImages = 5 }) 
 
       {/* URL Input Bar */}
       {showUrlInput && (
-        <div className="flex items-center space-x-2 bg-[#0d111c]/90 border border-slate-700/60 rounded-xl p-1.5 animate-fadeIn">
+        <div className="flex items-center space-x-2 bg-[#090D18]/90 border border-white/10 rounded-2xl p-2 animate-fadeIn shadow-inner">
           <input
             type="url"
             value={urlInput}
             onChange={(e) => setUrlInput(e.target.value)}
-            placeholder="Paste image web URL (e.g. https://...)"
-            className="flex-1 px-3 py-1.5 bg-transparent text-sm text-slate-200 placeholder-slate-500 outline-none"
+            placeholder="Paste high-res image URL (https://...)"
+            className="flex-1 px-3 py-1.5 bg-transparent text-xs text-slate-100 placeholder-slate-500 outline-none"
           />
           <button
             type="button"
             onClick={handleAddUrl}
             disabled={!urlInput.trim() || normalizedImages.length >= maxImages}
-            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold transition-all"
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer"
           >
-            Add
+            Add Image
           </button>
         </div>
       )}
@@ -189,10 +188,10 @@ export default function ImageUploader({ images = [], onChange, maxImages = 5 }) 
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onClick={() => fileInputRef.current?.click()}
-          className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all duration-200 ${
+          className={`border-2 border-dashed rounded-2xl p-7 text-center cursor-pointer transition-all duration-300 relative overflow-hidden group ${
             isDragging
-              ? 'border-indigo-500 bg-indigo-500/10 scale-[1.01]'
-              : 'border-slate-700/70 hover:border-indigo-500/50 bg-[#0d111c]/60 hover:bg-[#0d111c]/90'
+              ? 'border-indigo-400 bg-indigo-500/15 scale-[1.01] shadow-2xl shadow-indigo-500/20'
+              : 'border-white/10 hover:border-indigo-500/50 bg-[#090D18]/60 hover:bg-[#090D18]/90'
           }`}
         >
           <input
@@ -204,23 +203,25 @@ export default function ImageUploader({ images = [], onChange, maxImages = 5 }) 
             className="hidden"
           />
 
-          <div className="flex flex-col items-center justify-center space-y-2">
+          <div className="flex flex-col items-center justify-center space-y-3">
             {uploading ? (
-              <div className="flex flex-col items-center space-y-2 py-2">
-                <Loader2 className="h-8 w-8 text-indigo-400 animate-spin" />
-                <p className="text-xs text-slate-300 font-medium">Optimizing & uploading images...</p>
+              <div className="flex flex-col items-center space-y-2 py-3">
+                <Loader2 className="h-9 w-9 text-indigo-400 animate-spin" />
+                <p className="text-xs text-indigo-300 font-semibold">Processing & uploading image assets...</p>
               </div>
             ) : (
               <>
-                <div className="w-10 h-10 rounded-full bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-                  <Upload className="h-5 w-5" />
+                <div className="w-12 h-12 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 group-hover:bg-indigo-600/20 transition-all shadow-inner">
+                  <Upload className="h-6 w-6" />
                 </div>
-                <p className="text-sm font-medium text-slate-200">
-                  Drag & drop images here, or <span className="text-indigo-400 underline">browse</span>
-                </p>
-                <p className="text-xs text-slate-500">
-                  Supports JPEG, PNG, WebP, GIF, SVG up to 5MB (Max {maxImages} images)
-                </p>
+                <div>
+                  <p className="text-sm font-semibold text-slate-200">
+                    Drag & drop files here, or <span className="text-indigo-400 underline underline-offset-2">browse computer</span>
+                  </p>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Supports JPEG, PNG, WebP, GIF up to 5MB (Max {maxImages} images)
+                  </p>
+                </div>
               </>
             )}
           </div>
@@ -233,14 +234,16 @@ export default function ImageUploader({ images = [], onChange, maxImages = 5 }) 
           {normalizedImages.map((img, idx) => (
             <div
               key={idx}
-              className={`group relative rounded-xl overflow-hidden border aspect-square bg-slate-900/80 shadow-md transition-all duration-200 ${
-                img.is_primary ? 'border-amber-400 ring-2 ring-amber-400/20' : 'border-slate-700/60 hover:border-slate-500'
+              className={`group relative rounded-2xl overflow-hidden border aspect-square bg-[#090D18] shadow-lg transition-all duration-300 ${
+                img.is_primary 
+                  ? 'border-amber-400 ring-2 ring-amber-400/30' 
+                  : 'border-white/10 hover:border-slate-500'
               }`}
             >
               <img
                 src={img.image_url}
                 alt={`Preview ${idx + 1}`}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 onError={(e) => {
                   e.target.src = 'https://placehold.co/400x400/1e293b/white?text=Invalid+Image';
                 }}
@@ -248,14 +251,14 @@ export default function ImageUploader({ images = [], onChange, maxImages = 5 }) 
 
               {/* Primary Badge */}
               {img.is_primary && (
-                <div className="absolute top-1.5 left-1.5 bg-amber-500/90 backdrop-blur-md text-slate-950 font-bold text-[10px] px-2 py-0.5 rounded-full flex items-center space-x-1 shadow">
+                <div className="absolute top-2 left-2 bg-amber-400 text-slate-950 font-black text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full flex items-center space-x-1 shadow-lg backdrop-blur-md">
                   <Star className="h-2.5 w-2.5 fill-current" />
                   <span>PRIMARY</span>
                 </div>
               )}
 
               {/* Action Overlays */}
-              <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2">
+              <div className="absolute inset-0 bg-slate-950/75 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2.5 backdrop-blur-[2px]">
                 <div className="flex justify-end">
                   <button
                     type="button"
@@ -263,7 +266,7 @@ export default function ImageUploader({ images = [], onChange, maxImages = 5 }) 
                       e.stopPropagation();
                       handleRemove(idx);
                     }}
-                    className="p-1 bg-rose-600/80 hover:bg-rose-600 text-white rounded-md transition-colors"
+                    className="p-1.5 bg-rose-600/90 hover:bg-rose-600 text-white rounded-xl transition-colors cursor-pointer shadow-md"
                     title="Remove Image"
                   >
                     <X className="h-3.5 w-3.5" />
@@ -277,10 +280,10 @@ export default function ImageUploader({ images = [], onChange, maxImages = 5 }) 
                       e.stopPropagation();
                       handleSetPrimary(idx);
                     }}
-                    className="w-full py-1 px-1.5 bg-indigo-600/90 hover:bg-indigo-600 text-white text-[11px] font-medium rounded transition-colors flex items-center justify-center space-x-1"
+                    className="w-full py-1.5 px-2 bg-indigo-600/90 hover:bg-indigo-600 text-white text-[10px] font-bold rounded-xl transition-all flex items-center justify-center space-x-1 cursor-pointer shadow-md hover:scale-[1.02]"
                   >
                     <Star className="h-3 w-3" />
-                    <span>Make Primary</span>
+                    <span>Set as Primary</span>
                   </button>
                 )}
               </div>

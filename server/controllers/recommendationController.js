@@ -12,7 +12,7 @@ const recommendationService = require('../services/recommendationService');
 const getPersonalizedRecommendations = async (req, res) => {
   try {
     const userId = req.user ? req.user.id : null;
-    const limit = parseInt(req.query.limit, 10) || 6;
+    const limit = parseInt(req.query.limit, 10) || 12;
     
     let excludeIds = [];
     if (req.query.exclude_ids) {
@@ -58,7 +58,7 @@ const getSimilarResources = async (req, res) => {
     }
 
     const userId = req.user ? req.user.id : null;
-    const limit = parseInt(req.query.limit, 10) || 4;
+    const limit = parseInt(req.query.limit, 10) || 20;
 
     const similarItems = await recommendationService.getSimilarResources(resourceId, userId, { limit });
 

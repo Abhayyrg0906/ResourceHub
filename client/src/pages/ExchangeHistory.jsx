@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
-import { Star, FileText, CheckCircle, ShieldAlert } from 'lucide-react';
+import { Star, FileText, CheckCircle, ShieldAlert, Sparkles, ArrowRightLeft } from 'lucide-react';
+import GlassCard from '../components/ui/GlassCard';
+import SectionHeading from '../components/ui/SectionHeading';
+import AnimatedButton from '../components/ui/AnimatedButton';
 
 const mockHistory = [
-  { id: 401, item: 'Discrete Mathematics Textbook', partner: 'Sarah Connor', type: 'Buy', date: '2026-06-12', value: '$20', rating: 5 },
-  { id: 402, item: 'Raspberry Pi 3 Model B', partner: 'Dwight Schrute', type: 'Swap', date: '2026-07-01', value: 'Swapped: Arduino Uno', rating: 4 },
-  { id: 403, item: 'Lab Safety Goggles', partner: 'Pam Beesly', type: 'Donate', date: '2026-05-15', value: 'Free', rating: 0 }, // 0 means unrated
+  { id: 401, item: 'Discrete Mathematics Textbook', partner: 'Sarah Connor', type: 'Buy', date: '2026-06-12', value: '₹450', rating: 5 },
+  { id: 402, item: 'Raspberry Pi 4 Model B (4GB)', partner: 'Dwight Schrute', type: 'Swap', date: '2026-07-01', value: 'Swapped: Arduino Uno Kit', rating: 4 },
+  { id: 403, item: 'Lab Safety Goggles & Coat', partner: 'Pam Beesly', type: 'Donate', date: '2026-05-15', value: 'Free (Donated)', rating: 0 },
 ];
 
 export default function ExchangeHistory() {
@@ -23,26 +26,29 @@ export default function ExchangeHistory() {
   };
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-extrabold text-white tracking-tight">Exchange History</h1>
-        <p className="text-sm text-slate-400 mt-1">Review your completed trades, borrows, purchases, and donations on campus.</p>
-      </div>
+    <div className="max-w-5xl mx-auto space-y-8 pb-16">
+      <GlassCard className="p-6 sm:p-8" glow="indigo">
+        <SectionHeading
+          badge="Verified Record"
+          title="Exchange History"
+          description="Review your past physical handovers, trades, borrows, purchases, and peer ratings on campus."
+        />
+      </GlassCard>
 
-      <div className="bg-[#161d30]/60 border border-[#242f4c] rounded-2xl overflow-hidden shadow-lg">
+      <GlassCard className="p-0 overflow-hidden" glow="none">
         {history.length > 0 ? (
-          <div className="divide-y divide-[#242f4c]">
+          <div className="divide-y divide-white/[0.06]">
             {history.map(item => (
-              <div key={item.id} className="p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:bg-[#161d30]/80 transition-colors">
-                <div className="space-y-1">
+              <div key={item.id} className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:bg-white/[0.02] transition-colors">
+                <div className="space-y-1.5">
                   <div className="flex items-center space-x-2">
-                    <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-slate-900 border border-slate-700/60 text-indigo-300">
+                    <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-indigo-300">
                       {item.type}
                     </span>
-                    <span className="text-xs text-slate-500">Exchanged with {item.partner} on {item.date}</span>
+                    <span className="text-xs text-slate-400">Exchanged with <strong className="text-slate-200">{item.partner}</strong> on {item.date}</span>
                   </div>
-                  <h3 className="font-bold text-slate-200 text-base">{item.item}</h3>
-                  <p className="text-xs text-slate-400 font-medium">Terms: {item.value}</p>
+                  <h3 className="font-bold text-white text-base font-display">{item.item}</h3>
+                  <p className="text-xs text-slate-400 font-medium">Terms: <span className="text-slate-300">{item.value}</span></p>
                 </div>
 
                 <div className="flex items-center space-x-4 w-full sm:w-auto justify-between sm:justify-end">
@@ -52,22 +58,24 @@ export default function ExchangeHistory() {
                         key={star}
                         className={`h-4.5 w-4.5 ${
                           star <= item.rating
-                            ? 'text-amber-400 fill-amber-400'
-                            : 'text-slate-600'
+                            ? 'text-amber-400 fill-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.4)]'
+                            : 'text-slate-700'
                         }`}
                       />
                     ))}
                   </div>
 
                   {item.rating === 0 ? (
-                    <button
+                    <AnimatedButton
                       onClick={() => setSelectedItem(item.id)}
-                      className="text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 rounded-xl transition-colors whitespace-nowrap"
+                      variant="primary"
+                      size="sm"
+                      icon={Star}
                     >
                       Rate Partner
-                    </button>
+                    </AnimatedButton>
                   ) : (
-                    <span className="text-xs text-emerald-400 font-semibold flex items-center space-x-1">
+                    <span className="text-xs text-emerald-400 font-bold flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
                       <CheckCircle className="h-4 w-4" />
                       <span>Rated</span>
                     </span>
@@ -77,17 +85,17 @@ export default function ExchangeHistory() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-12 text-slate-400">No previous exchange history found.</div>
+          <div className="text-center py-16 text-slate-400">No previous exchange history found.</div>
         )}
-      </div>
+      </GlassCard>
 
-      {/* Mock Rating Modal */}
+      {/* Rating Modal */}
       {selectedItem && (
-        <div className="fixed inset-0 bg-[#0d111c]/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-[#161d30] border border-[#242f4c] rounded-3xl p-6 max-w-sm w-full space-y-4">
-            <h3 className="font-bold text-white text-lg">Rate Exchange Partner</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Your feedback is used to update the student trust rating score on campus. Please select rating stars:
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <GlassCard className="p-6 max-w-sm w-full space-y-5" glow="amber">
+            <h3 className="font-bold text-white text-lg font-display">Rate Exchange Partner</h3>
+            <p className="text-xs text-slate-400 leading-relaxed font-normal">
+              Your feedback is used to update the student trust score on campus. Select rating stars:
             </p>
             
             <div className="flex justify-center space-x-2 my-4">
@@ -95,32 +103,33 @@ export default function ExchangeHistory() {
                 <button
                   key={star}
                   onClick={() => setRating(star)}
-                  className="p-1 focus:outline-none"
+                  className="p-1 focus:outline-none transition-transform hover:scale-125"
                 >
                   <Star
                     className={`h-8 w-8 ${
-                      star <= rating ? 'text-amber-400 fill-amber-400' : 'text-slate-600'
+                      star <= rating ? 'text-amber-400 fill-amber-400 drop-shadow-[0_0_12px_rgba(245,158,11,0.6)]' : 'text-slate-700'
                     }`}
                   />
                 </button>
               ))}
             </div>
 
-            <div className="flex space-x-2">
-              <button
+            <div className="flex space-x-2 pt-2">
+              <AnimatedButton
                 onClick={() => handleRate(selectedItem)}
-                className="flex-grow bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-xl transition-colors text-sm"
+                variant="primary"
+                className="flex-grow"
               >
                 Submit Feedback
-              </button>
+              </AnimatedButton>
               <button
                 onClick={() => setSelectedItem(null)}
-                className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold px-4 py-2.5 rounded-xl border border-slate-700 transition-colors text-sm"
+                className="bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 font-bold px-4 py-2.5 rounded-xl border border-white/[0.08] transition-colors text-xs"
               >
                 Cancel
               </button>
             </div>
-          </div>
+          </GlassCard>
         </div>
       )}
     </div>

@@ -27,6 +27,9 @@ import { getMyProfile, updateMyProfile, getUserProfile } from '../services/userS
 import chatService from '../services/chatService';
 import { useAuth } from '../context/AuthContext';
 import TrustBreakdownModal from '../components/TrustBreakdownModal';
+import GlassCard from '../components/ui/GlassCard';
+import SectionHeading from '../components/ui/SectionHeading';
+import AnimatedButton from '../components/ui/AnimatedButton';
 
 export default function Profile() {
   const { userId } = useParams();
@@ -151,7 +154,6 @@ export default function Profile() {
     if (!profileData) return;
     try {
       setChatLoading(true);
-      // Find active listing or open chat directly
       const firstListing = (profileData.active_listings || [])[0];
       if (firstListing) {
         const convRes = await chatService.getOrCreateConversation({
@@ -162,7 +164,6 @@ export default function Profile() {
           return;
         }
       }
-      // Fallback navigate to chat
       navigate('/chat');
     } catch (err) {
       console.error('Error initiating conversation:', err);
@@ -183,21 +184,21 @@ export default function Profile() {
 
   if (error || !profileData) {
     return (
-      <div className="max-w-2xl mx-auto py-16 text-center space-y-6 bg-[#161d30]/60 border border-[#242f4c] rounded-3xl p-8 backdrop-blur-md">
+      <GlassCard className="max-w-2xl mx-auto py-16 text-center space-y-6 p-8" glow="rose">
         <div className="w-16 h-16 rounded-full bg-rose-500/10 border border-rose-500/30 flex items-center justify-center mx-auto text-rose-400">
           <AlertCircle className="h-8 w-8" />
         </div>
         <div className="space-y-2">
-          <h2 className="text-xl font-bold text-white">Profile Unavailable</h2>
+          <h2 className="text-xl font-bold text-white font-display">Profile Unavailable</h2>
           <p className="text-sm text-slate-400 max-w-md mx-auto">{error || 'This user profile could not be found.'}</p>
         </div>
-        <button
+        <AnimatedButton
           onClick={() => navigate('/resources')}
-          className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/20"
+          variant="primary"
         >
           Explore Marketplace
-        </button>
-      </div>
+        </AnimatedButton>
+      </GlassCard>
     );
   }
 
@@ -216,10 +217,7 @@ export default function Profile() {
     <div className="max-w-5xl mx-auto space-y-8 pb-16">
 
       {/* Profile Header Hero */}
-      <div className="relative bg-gradient-to-b from-[#19223a] to-[#141b2d] border border-[#242f4c] rounded-3xl p-6 sm:p-8 md:p-10 shadow-2xl overflow-hidden backdrop-blur-md">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl -z-10" />
-        <div className="absolute -bottom-10 -left-10 w-72 h-72 bg-pink-500/5 rounded-full blur-2xl -z-10" />
-
+      <GlassCard className="p-6 sm:p-8 md:p-10 relative overflow-hidden" glow="indigo">
         <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-6">
           
           {/* Left: Avatar & Identity Details */}
@@ -230,7 +228,7 @@ export default function Profile() {
                 <img
                   src={profileData.profile_photo_url}
                   alt={profileData.name}
-                  className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl object-cover ring-4 ring-[#242f4c] shadow-2xl bg-[#0d111c]"
+                  className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl object-cover ring-4 ring-white/[0.08] shadow-2xl bg-[#080A12]"
                   onError={(e) => {
                     e.target.onerror = null;
                     e.target.style.display = 'none';
@@ -239,7 +237,7 @@ export default function Profile() {
                 />
               ) : null}
               <div 
-                className={`w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center font-black text-white text-4xl shadow-2xl ring-4 ring-[#242f4c] ${profileData.profile_photo_url ? 'hidden' : 'flex'}`}
+                className={`w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-gradient-to-tr from-indigo-500 via-purple-600 to-pink-500 flex items-center justify-center font-black text-white text-4xl shadow-2xl ring-4 ring-white/[0.08] font-display ${profileData.profile_photo_url ? 'hidden' : 'flex'}`}
               >
                 {profileData.name.charAt(0).toUpperCase()}
               </div>
@@ -258,10 +256,10 @@ export default function Profile() {
             {/* User Meta */}
             <div className="space-y-2">
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight font-display">
                   {profileData.name}
                 </h1>
-                <span className="flex items-center gap-1 text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 px-3 py-1 rounded-full font-semibold">
+                <span className="flex items-center gap-1.5 text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 px-3 py-1 rounded-full font-bold">
                   <ShieldCheck className="h-3.5 w-3.5" />
                   <span>Verified Student</span>
                 </span>
@@ -269,7 +267,7 @@ export default function Profile() {
                   <button
                     type="button"
                     onClick={() => setShowTrustModal(true)}
-                    className="flex items-center gap-1.5 text-xs bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-3 py-1 rounded-full font-semibold transition-colors cursor-pointer"
+                    className="flex items-center gap-1.5 text-xs bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-3 py-1 rounded-full font-bold transition-colors cursor-pointer"
                     title="View detailed reputation and trust breakdown"
                   >
                     <Award className="h-3.5 w-3.5 text-indigo-400" />
@@ -319,37 +317,37 @@ export default function Profile() {
           {/* Right: Actions */}
           <div className="flex items-center gap-3 w-full md:w-auto justify-center md:justify-end">
             {isOwnProfile ? (
-              <button
+              <AnimatedButton
                 onClick={() => setIsEditOpen(true)}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-all shadow-lg shadow-indigo-600/25 hover:shadow-indigo-600/40"
+                variant="primary"
+                icon={Edit3}
               >
-                <Edit3 className="h-4 w-4" />
-                <span>Edit Profile</span>
-              </button>
+                Edit Profile
+              </AnimatedButton>
             ) : (
-              <button
+              <AnimatedButton
                 onClick={handleStartChat}
                 disabled={chatLoading}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold text-xs transition-all shadow-lg shadow-indigo-600/25 disabled:opacity-50"
+                variant="primary"
+                icon={MessageSquare}
               >
-                <MessageSquare className="h-4 w-4" />
-                <span>{chatLoading ? 'Connecting...' : 'Message Student'}</span>
-              </button>
+                {chatLoading ? 'Connecting...' : 'Message Student'}
+              </AnimatedButton>
             )}
           </div>
         </div>
 
         {/* Highlight Stats Strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8 pt-8 border-t border-[#242f4c]/80">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8 pt-8 border-t border-white/[0.06]">
           
           {/* Trust & Reputation Score */}
           <div 
             onClick={() => setShowTrustModal(true)}
-            className="bg-[#0f1523]/80 hover:bg-[#141c2e] transition-colors p-4 rounded-2xl border border-[#242f4c] text-center sm:text-left cursor-pointer group"
+            className="bg-white/[0.02] hover:bg-white/[0.05] transition-colors p-4 rounded-2xl border border-white/[0.06] text-center sm:text-left cursor-pointer group"
             title="Click to view full reputation factors breakdown"
           >
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] uppercase font-extrabold tracking-widest text-slate-400">
+              <span className="text-[10px] uppercase font-black tracking-widest text-slate-400">
                 Reputation Score
               </span>
               <span className="text-[10px] text-cyan-400 group-hover:underline flex items-center gap-0.5">
@@ -357,22 +355,22 @@ export default function Profile() {
               </span>
             </div>
             <div className="flex items-baseline justify-center sm:justify-start gap-1.5">
-              <span className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">
+              <span className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300 font-display">
                 {profileData.reputation_score !== undefined ? profileData.reputation_score.toFixed(0) : trustScore}%
               </span>
             </div>
             <span className="text-[10px] text-slate-500 mt-1 block">
-              Multi-factor campus audit (M17)
+              Multi-factor campus audit
             </span>
           </div>
 
           {/* Completed Exchanges */}
-          <div className="bg-[#0f1523]/80 p-4 rounded-2xl border border-[#242f4c] text-center sm:text-left">
-            <span className="text-[10px] uppercase font-extrabold tracking-widest text-slate-400 block mb-1">
+          <div className="bg-white/[0.02] p-4 rounded-2xl border border-white/[0.06] text-center sm:text-left">
+            <span className="text-[10px] uppercase font-black tracking-widest text-slate-400 block mb-1">
               Completed Exchanges
             </span>
             <div className="flex items-baseline justify-center sm:justify-start gap-1.5">
-              <span className="text-2xl sm:text-3xl font-black text-white">
+              <span className="text-2xl sm:text-3xl font-black text-white font-display">
                 {stats.completed_exchanges}
               </span>
               <ArrowRightLeft className="h-4 w-4 text-indigo-400" />
@@ -381,12 +379,12 @@ export default function Profile() {
           </div>
 
           {/* Active Listings */}
-          <div className="bg-[#0f1523]/80 p-4 rounded-2xl border border-[#242f4c] text-center sm:text-left">
-            <span className="text-[10px] uppercase font-extrabold tracking-widest text-slate-400 block mb-1">
+          <div className="bg-white/[0.02] p-4 rounded-2xl border border-white/[0.06] text-center sm:text-left">
+            <span className="text-[10px] uppercase font-black tracking-widest text-slate-400 block mb-1">
               Active Listings
             </span>
             <div className="flex items-baseline justify-center sm:justify-start gap-1.5">
-              <span className="text-2xl sm:text-3xl font-black text-white">
+              <span className="text-2xl sm:text-3xl font-black text-white font-display">
                 {stats.active_listings}
               </span>
               <Package className="h-4 w-4 text-purple-400" />
@@ -395,12 +393,12 @@ export default function Profile() {
           </div>
 
           {/* Peer Rating */}
-          <div className="bg-[#0f1523]/80 p-4 rounded-2xl border border-[#242f4c] text-center sm:text-left">
-            <span className="text-[10px] uppercase font-extrabold tracking-widest text-slate-400 block mb-1">
+          <div className="bg-white/[0.02] p-4 rounded-2xl border border-white/[0.06] text-center sm:text-left">
+            <span className="text-[10px] uppercase font-black tracking-widest text-slate-400 block mb-1">
               Average Rating
             </span>
             <div className="flex items-baseline justify-center sm:justify-start gap-1.5">
-              <span className="text-2xl sm:text-3xl font-black text-amber-400">
+              <span className="text-2xl sm:text-3xl font-black text-amber-400 font-display">
                 {stats.average_rating > 0 ? Number(stats.average_rating).toFixed(1) : '5.0'}
               </span>
               <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
@@ -409,16 +407,16 @@ export default function Profile() {
           </div>
 
         </div>
-      </div>
+      </GlassCard>
 
       {/* Tabs Navigation */}
-      <div className="flex items-center gap-2 border-b border-[#242f4c] pb-3">
+      <div className="flex items-center gap-2 border-b border-white/[0.06] pb-3">
         <button
           onClick={() => setActiveTab('overview')}
-          className={`px-5 py-2 rounded-xl text-xs font-bold transition-all ${
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
             activeTab === 'overview'
-              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/25'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-[#161d30]'
+              ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/25'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
           }`}
         >
           About & Bio
@@ -426,28 +424,28 @@ export default function Profile() {
 
         <button
           onClick={() => setActiveTab('listings')}
-          className={`px-5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
             activeTab === 'listings'
-              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/25'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-[#161d30]'
+              ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/25'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
           }`}
         >
           <span>Active Listings</span>
-          <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${activeTab === 'listings' ? 'bg-indigo-800 text-white' : 'bg-[#1f2942] text-slate-300'}`}>
+          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${activeTab === 'listings' ? 'bg-black/30 text-white' : 'bg-white/[0.06] text-slate-300'}`}>
             {activeListings.length}
           </span>
         </button>
 
         <button
           onClick={() => setActiveTab('reviews')}
-          className={`px-5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
             activeTab === 'reviews'
-              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/25'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-[#161d30]'
+              ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/25'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
           }`}
         >
           <span>Peer Reviews</span>
-          <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${activeTab === 'reviews' ? 'bg-indigo-800 text-white' : 'bg-[#1f2942] text-slate-300'}`}>
+          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${activeTab === 'reviews' ? 'bg-black/30 text-white' : 'bg-white/[0.06] text-slate-300'}`}>
             {reviews.length}
           </span>
         </button>
@@ -458,17 +456,17 @@ export default function Profile() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           
           {/* Bio card */}
-          <div className="md:col-span-2 bg-[#161d30]/60 border border-[#242f4c] rounded-3xl p-6 sm:p-8 space-y-4">
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
+          <GlassCard className="md:col-span-2 p-6 sm:p-8 space-y-4" glow="indigo">
+            <h3 className="text-base font-bold text-white flex items-center gap-2 font-display">
               <Sparkles className="h-4 w-4 text-indigo-400" />
               <span>About {profileData.name}</span>
             </h3>
-            <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
+            <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-normal">
               {profileData.bio || "This student hasn't written a biography yet."}
             </p>
 
-            <div className="pt-4 border-t border-[#242f4c] grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-[#0f1523]/80 border border-[#242f4c]">
+            <div className="pt-4 border-t border-white/[0.06] grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
                 <Building className="h-5 w-5 text-indigo-400 flex-shrink-0" />
                 <div>
                   <span className="text-[10px] uppercase font-bold text-slate-500 block">Department</span>
@@ -476,7 +474,7 @@ export default function Profile() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-[#0f1523]/80 border border-[#242f4c]">
+              <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
                 <GraduationCap className="h-5 w-5 text-purple-400 flex-shrink-0" />
                 <div>
                   <span className="text-[10px] uppercase font-bold text-slate-500 block">Year of Study</span>
@@ -486,7 +484,7 @@ export default function Profile() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-[#0f1523]/80 border border-[#242f4c]">
+              <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
                 <Calendar className="h-5 w-5 text-emerald-400 flex-shrink-0" />
                 <div>
                   <span className="text-[10px] uppercase font-bold text-slate-500 block">Member Since</span>
@@ -496,7 +494,7 @@ export default function Profile() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-[#0f1523]/80 border border-[#242f4c]">
+              <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
                 <ShieldCheck className="h-5 w-5 text-cyan-400 flex-shrink-0" />
                 <div>
                   <span className="text-[10px] uppercase font-bold text-slate-500 block">Status</span>
@@ -504,12 +502,12 @@ export default function Profile() {
                 </div>
               </div>
             </div>
-          </div>
+          </GlassCard>
 
           {/* Trust Score & Badges Sidecard */}
           <div className="space-y-6">
-            <div className="bg-[#161d30]/60 border border-[#242f4c] rounded-3xl p-6 space-y-4">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
+            <GlassCard className="p-6 space-y-4" glow="amber">
+              <h3 className="text-base font-bold text-white flex items-center gap-2 font-display">
                 <Award className="h-4 w-4 text-amber-400" />
                 <span>Campus Badges</span>
               </h3>
@@ -541,7 +539,7 @@ export default function Profile() {
                   </div>
                 )}
               </div>
-            </div>
+            </GlassCard>
           </div>
 
         </div>
@@ -553,14 +551,13 @@ export default function Profile() {
           {activeListings.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {activeListings.map((item) => (
-                <Link
+                <GlassCard
                   key={item.id}
-                  to={`/resources/${item.id}`}
-                  className="group bg-[#161d30]/60 border border-[#242f4c] hover:border-indigo-500/50 rounded-3xl p-5 transition-all duration-300 hover:shadow-xl hover:shadow-indigo-950/20 flex flex-col justify-between"
+                  interactive
+                  className="p-5 flex flex-col justify-between"
                 >
                   <div className="space-y-3">
-                    {/* Thumbnail or Icon */}
-                    <div className="w-full h-40 rounded-2xl bg-[#0f1523] border border-[#242f4c]/80 flex items-center justify-center overflow-hidden">
+                    <div className="w-full h-44 rounded-2xl bg-[#080A12] border border-white/[0.06] flex items-center justify-center overflow-hidden">
                       {item.image_url ? (
                         <img 
                           src={item.image_url} 
@@ -573,7 +570,7 @@ export default function Profile() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+                      <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
                         {item.category || 'General'}
                       </span>
                       <span className="text-[10px] font-bold text-slate-400">
@@ -581,46 +578,50 @@ export default function Profile() {
                       </span>
                     </div>
 
-                    <h4 className="font-bold text-white text-base group-hover:text-indigo-400 transition-colors line-clamp-1">
+                    <h4 className="font-bold text-white text-base group-hover:text-indigo-400 transition-colors line-clamp-1 font-display">
                       {item.title}
                     </h4>
-                    <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                    <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed font-normal">
                       {item.description}
                     </p>
                   </div>
 
-                  <div className="flex items-center justify-between pt-4 mt-4 border-t border-[#242f4c]">
-                    <span className="text-sm font-extrabold text-indigo-400">
+                  <div className="flex items-center justify-between pt-4 mt-4 border-t border-white/[0.06]">
+                    <span className="text-base font-black text-indigo-400 font-display">
                       {item.exchange_type === 'SELL' ? `₹${item.price}` : item.exchange_type}
                     </span>
-                    <span className="flex items-center gap-1 text-xs text-slate-400 group-hover:text-white font-medium">
+                    <Link
+                      to={`/resources/${item.id}`}
+                      className="flex items-center gap-1 text-xs text-slate-300 group-hover:text-white font-bold"
+                    >
                       <span>View</span>
-                      <ExternalLink className="h-3 w-3" />
-                    </span>
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </Link>
                   </div>
-                </Link>
+                </GlassCard>
               ))}
             </div>
           ) : (
-            <div className="py-16 text-center bg-[#161d30]/40 border border-[#242f4c] rounded-3xl space-y-4">
-              <div className="w-14 h-14 rounded-full bg-[#1f2942] border border-[#2d3a5d] flex items-center justify-center mx-auto text-slate-500">
+            <GlassCard className="py-16 text-center space-y-4">
+              <div className="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mx-auto text-slate-500">
                 <Package className="h-7 w-7" />
               </div>
               <div className="space-y-1">
-                <p className="text-white font-bold text-base">No active listings</p>
+                <p className="text-white font-bold text-base font-display">No active listings</p>
                 <p className="text-xs text-slate-400 max-w-sm mx-auto">
                   {isOwnProfile ? "You haven't listed any resources currently available." : "This user doesn't have any active listings right now."}
                 </p>
               </div>
               {isOwnProfile && (
-                <Link
-                  to="/resources/create"
-                  className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-all shadow-md"
+                <AnimatedButton
+                  onClick={() => navigate('/resources/create')}
+                  variant="primary"
+                  size="sm"
                 >
                   List a Resource
-                </Link>
+                </AnimatedButton>
               )}
-            </div>
+            </GlassCard>
           )}
         </div>
       )}
@@ -630,13 +631,13 @@ export default function Profile() {
         <div className="space-y-4">
           {reviews.length > 0 ? (
             reviews.map((r) => (
-              <div
+              <GlassCard
                 key={r.id}
-                className="bg-[#161d30]/60 border border-[#242f4c] rounded-2xl p-5 sm:p-6 space-y-3"
+                className="p-5 sm:p-6 space-y-3"
               >
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center font-bold text-white shadow-md text-sm">
+                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-white shadow-md text-sm font-display">
                       {r.reviewer_name ? r.reviewer_name.charAt(0).toUpperCase() : 'U'}
                     </div>
                     <div>
@@ -660,53 +661,53 @@ export default function Profile() {
                         key={star}
                         className={`h-4 w-4 ${
                           star <= r.rating
-                            ? 'fill-amber-400 text-amber-400'
+                            ? 'fill-amber-400 text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.4)]'
                             : 'text-slate-700'
                         }`}
                       />
                     ))}
-                    <span className="text-xs font-extrabold text-amber-300 ml-1.5">
+                    <span className="text-xs font-black text-amber-300 ml-1.5 font-display">
                       {r.rating}.0
                     </span>
                   </div>
                 </div>
 
                 {r.review_text && (
-                  <p className="text-xs sm:text-sm text-slate-300 leading-relaxed pt-1">
+                  <p className="text-xs sm:text-sm text-slate-300 leading-relaxed pt-1 font-normal">
                     "{r.review_text}"
                   </p>
                 )}
-              </div>
+              </GlassCard>
             ))
           ) : (
-            <div className="py-16 text-center bg-[#161d30]/40 border border-[#242f4c] rounded-3xl space-y-4">
-              <div className="w-14 h-14 rounded-full bg-[#1f2942] border border-[#2d3a5d] flex items-center justify-center mx-auto text-slate-500">
+            <GlassCard className="py-16 text-center space-y-4">
+              <div className="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mx-auto text-slate-500">
                 <Star className="h-7 w-7" />
               </div>
               <div className="space-y-1">
-                <p className="text-white font-bold text-base">No reviews yet</p>
+                <p className="text-white font-bold text-base font-display">No reviews yet</p>
                 <p className="text-xs text-slate-400 max-w-sm mx-auto">
                   Reviews are submitted by peer students following verified physical handovers.
                 </p>
               </div>
-            </div>
+            </GlassCard>
           )}
         </div>
       )}
 
       {/* EDIT PROFILE MODAL */}
       {isEditOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-[#161d30] border border-[#242f4c] rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fadeIn">
+          <GlassCard className="p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto" glow="indigo">
             
-            <div className="flex items-center justify-between pb-4 border-b border-[#242f4c]">
+            <div className="flex items-center justify-between pb-4 border-b border-white/[0.06]">
               <div>
-                <h3 className="text-xl font-extrabold text-white">Edit Student Profile</h3>
+                <h3 className="text-xl font-black text-white font-display">Edit Student Profile</h3>
                 <p className="text-xs text-slate-400 mt-0.5">Update your public campus information.</p>
               </div>
               <button
                 onClick={() => setIsEditOpen(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-[#1f2942] transition-colors"
+                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/[0.04] transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -735,7 +736,7 @@ export default function Profile() {
                   Profile Photo URL
                 </label>
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-[#0f1523] border border-[#242f4c] flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <div className="w-12 h-12 rounded-2xl bg-[#080A12] border border-white/[0.08] flex items-center justify-center overflow-hidden flex-shrink-0">
                     {editForm.profile_photo_url ? (
                       <img
                         src={editForm.profile_photo_url}
@@ -755,7 +756,7 @@ export default function Profile() {
                     placeholder="https://example.com/avatar.jpg"
                     value={editForm.profile_photo_url}
                     onChange={(e) => setEditForm({ ...editForm, profile_photo_url: e.target.value })}
-                    className="flex-1 px-4 py-2.5 bg-[#0d111c] border border-slate-700/80 focus:border-indigo-500 rounded-xl text-white text-xs outline-none transition-colors"
+                    className="flex-1 px-4 py-2.5 bg-black/40 border border-white/[0.08] focus:border-indigo-500 rounded-xl text-white text-xs outline-none transition-colors"
                   />
                 </div>
               </div>
@@ -770,7 +771,7 @@ export default function Profile() {
                   required
                   value={editForm.name}
                   onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-[#0d111c] border border-slate-700/80 focus:border-indigo-500 rounded-xl text-white text-xs outline-none transition-colors"
+                  className="w-full px-4 py-2.5 bg-black/40 border border-white/[0.08] focus:border-indigo-500 rounded-xl text-white text-xs outline-none transition-colors"
                 />
               </div>
 
@@ -785,7 +786,7 @@ export default function Profile() {
                     placeholder="e.g. Computer Science"
                     value={editForm.department}
                     onChange={(e) => setEditForm({ ...editForm, department: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-[#0d111c] border border-slate-700/80 focus:border-indigo-500 rounded-xl text-white text-xs outline-none transition-colors"
+                    className="w-full px-4 py-2.5 bg-black/40 border border-white/[0.08] focus:border-indigo-500 rounded-xl text-white text-xs outline-none transition-colors"
                   />
                 </div>
 
@@ -796,7 +797,7 @@ export default function Profile() {
                   <select
                     value={editForm.year_of_study}
                     onChange={(e) => setEditForm({ ...editForm, year_of_study: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-[#0d111c] border border-slate-700/80 focus:border-indigo-500 rounded-xl text-white text-xs outline-none transition-colors"
+                    className="w-full px-4 py-2.5 bg-[#080A12] border border-white/[0.08] focus:border-indigo-500 rounded-xl text-white text-xs outline-none transition-colors"
                   >
                     <option value="">Select Year</option>
                     <option value="1">Year 1 (Freshman)</option>
@@ -819,7 +820,7 @@ export default function Profile() {
                   placeholder="+91 98765 43210"
                   value={editForm.phone_number}
                   onChange={(e) => setEditForm({ ...editForm, phone_number: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-[#0d111c] border border-slate-700/80 focus:border-indigo-500 rounded-xl text-white text-xs outline-none transition-colors"
+                  className="w-full px-4 py-2.5 bg-black/40 border border-white/[0.08] focus:border-indigo-500 rounded-xl text-white text-xs outline-none transition-colors"
                 />
                 <span className="text-[10px] text-slate-500 block">Only visible to confirmed exchange partners.</span>
               </div>
@@ -840,32 +841,33 @@ export default function Profile() {
                   placeholder="Share a short bio about what you study and items you are looking for..."
                   value={editForm.bio}
                   onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-[#0d111c] border border-slate-700/80 focus:border-indigo-500 rounded-xl text-white text-xs outline-none transition-colors resize-none"
+                  className="w-full px-4 py-2.5 bg-black/40 border border-white/[0.08] focus:border-indigo-500 rounded-xl text-white text-xs outline-none transition-colors resize-none"
                 />
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#242f4c]">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/[0.06]">
                 <button
                   type="button"
                   onClick={() => setIsEditOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-[#1f2942] transition-colors"
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-white/[0.04] transition-colors"
                 >
                   Cancel
                 </button>
-                <button
+                <AnimatedButton
                   type="submit"
                   disabled={editLoading}
-                  className="flex items-center gap-2 px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-all shadow-md shadow-indigo-600/30 disabled:opacity-50"
+                  variant="primary"
+                  size="sm"
+                  icon={Save}
                 >
-                  <Save className="h-3.5 w-3.5" />
-                  <span>{editLoading ? 'Saving...' : 'Save Changes'}</span>
-                </button>
+                  {editLoading ? 'Saving...' : 'Save Changes'}
+                </AnimatedButton>
               </div>
 
             </form>
 
-          </div>
+          </GlassCard>
         </div>
       )}
 
