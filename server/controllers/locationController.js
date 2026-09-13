@@ -104,6 +104,8 @@ const CAMPUS_LOCATIONS = [
   }
 ];
 
+const cache = require('../utils/cache');
+
 /**
  * Get all verified safe campus locations
  * GET /api/locations/campus
@@ -111,6 +113,12 @@ const CAMPUS_LOCATIONS = [
 const getCampusLocations = async (req, res) => {
   try {
     const { category } = req.query;
+    const cacheKey = `locations:campus:${category || 'all'}`;
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
+
     let locations = CAMPUS_LOCATIONS;
 
     if (category && category !== 'All') {
@@ -119,11 +127,14 @@ const getCampusLocations = async (req, res) => {
       );
     }
 
-    return res.status(200).json({
+    const responseData = {
       success: true,
       count: locations.length,
       data: locations
-    });
+    };
+    cache.set(cacheKey, responseData, 900); // 15 mins cache
+
+    return res.status(200).json(responseData);
   } catch (error) {
     console.error('[LocationController] Error fetching campus locations:', error);
     return res.status(500).json({

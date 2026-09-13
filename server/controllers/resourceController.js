@@ -2,11 +2,23 @@ const db = require('../config/database');
 const { notifyWishlistAvailability, notifyWishlistCategoryMatch } = require('../services/notificationService');
 const { processAndSaveImages, deleteImageFile } = require('../services/imageService');
 const expiryService = require('../services/expiryService');
+const cache = require('../utils/cache');
 
 // 1. Get Categories
 const getCategories = async (req, res) => {
   try {
+    const cachedCategories = cache.get('public:categories');
+    if (cachedCategories) {
+      return res.status(200).json({
+        success: true,
+        data: cachedCategories,
+        _cached: true
+      });
+    }
+
     const [rows] = await db.query('SELECT id, name, slug FROM categories ORDER BY name ASC');
+    cache.set('public:categories', rows, 600); // 10 minutes cache
+
     return res.status(200).json({
       success: true,
       data: rows

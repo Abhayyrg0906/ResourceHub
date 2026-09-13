@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 
 // Auth Provider
@@ -7,23 +7,35 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 // Layout
 import MainLayout from './layouts/MainLayout';
 
-// Pages
+// Direct import for immediate landing
 import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import StudentDashboard from './pages/StudentDashboard';
-import Marketplace from './pages/Marketplace';
-import ResourceDetails from './pages/ResourceDetails';
-import AddResource from './pages/AddResource';
-import EditResource from './pages/EditResource';
-import MyListings from './pages/MyListings';
-import MyRequests from './pages/MyRequests';
-import ExchangeHistory from './pages/ExchangeHistory';
-import Profile from './pages/Profile';
-import Notifications from './pages/Notifications';
-import AdminDashboard from './pages/AdminDashboard';
-import Chat from './pages/Chat';
-import Wishlist from './pages/Wishlist';
+
+// Lazy-loaded application routes
+const StudentDashboard = lazy(() => import('./pages/StudentDashboard'));
+const Marketplace = lazy(() => import('./pages/Marketplace'));
+const ResourceDetails = lazy(() => import('./pages/ResourceDetails'));
+const AddResource = lazy(() => import('./pages/AddResource'));
+const EditResource = lazy(() => import('./pages/EditResource'));
+const MyListings = lazy(() => import('./pages/MyListings'));
+const MyRequests = lazy(() => import('./pages/MyRequests'));
+const ExchangeHistory = lazy(() => import('./pages/ExchangeHistory'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Notifications = lazy(() => import('./pages/Notifications'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const Chat = lazy(() => import('./pages/Chat'));
+const Wishlist = lazy(() => import('./pages/Wishlist'));
+
+// Route Loading Spinner
+function RouteFallback() {
+  return (
+    <div className="min-h-[60vh] flex flex-col items-center justify-center p-8">
+      <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-3" />
+      <p className="text-slate-400 text-sm animate-pulse">Loading module...</p>
+    </div>
+  );
+}
 
 // Protected Route Wrapper
 function ProtectedRoute({ children }) {
@@ -59,7 +71,8 @@ export default function App() {
   return (
     <AuthProvider>
       <Router>
-        <Routes>
+        <Suspense fallback={<RouteFallback />}>
+          <Routes>
           {/* Public Landing & Authentication */}
           <Route path="/" element={<LandingPage />} />
           
@@ -103,6 +116,7 @@ export default function App() {
           {/* Catch-all Redirect */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </Suspense>
       </Router>
     </AuthProvider>
   );

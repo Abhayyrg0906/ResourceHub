@@ -12,13 +12,15 @@ const {
   deleteResourceImage,
   renewResource,
   triggerAutoArchive,
-  getExpiredResourcesPreview
+  getExpiredResourcesPreview,
+  getCategories
 } = require('../controllers/resourceController');
 const { getSimilarResources } = require('../controllers/recommendationController');
 const { protect, optionalAuth, requireAdmin } = require('../middleware/authMiddleware');
 const { handleImageUpload } = require('../middleware/imageUploadMiddleware');
 
 // Public endpoints
+router.get('/categories', getCategories);
 router.get('/', getResources);
 router.get('/:id/similar', optionalAuth, getSimilarResources);
 

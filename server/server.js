@@ -75,12 +75,15 @@ app.use((err, req, res, next) => {
 const server = http.createServer(app);
 initSocket(server);
 
+const { ensurePerformanceIndexes } = require('./config/performance_indexes');
+
 // Test database connection at startup
 async function testDbConnection() {
   try {
     const connection = await db.getConnection();
     console.log(`[OK] Connected to MySQL database successfully.`);
     connection.release();
+    await ensurePerformanceIndexes();
   } catch (error) {
     console.warn(`====================================================================`);
     console.warn(`[WARNING] Could not establish connection to MySQL database:`);

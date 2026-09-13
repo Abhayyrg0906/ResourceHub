@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const reputationService = require('../services/reputationService');
+const cache = require('../utils/cache');
 
 /**
  * 1. Get User-Scoped Student Dashboard Analytics
@@ -209,6 +210,15 @@ const getStudentAnalytics = async (req, res) => {
  */
 const getAdminAnalytics = async (req, res) => {
   try {
+    const cachedStats = cache.get('admin:analytics:summary');
+    if (cachedStats) {
+      return res.status(200).json({
+        success: true,
+        data: cachedStats,
+        _cached: true
+      });
+    }
+
     // 1. Users Statistics
     const [[usersRow]] = await db.query(
       `SELECT 
@@ -322,86 +332,90 @@ const getAdminAnalytics = async (req, res) => {
       LIMIT 6`
     );
 
+    const responseData = {
+      total_users: parseInt(usersRow.total_users, 10) || 0,
+      active_users: parseInt(usersRow.active_users, 10) || 0,
+      suspended_users: parseInt(usersRow.suspended_users, 10) || 0,
+      pending_verification_users: parseInt(usersRow.pending_verification_users, 10) || 0,
+      total_resources: parseInt(resourcesRow.total_resources, 10) || 0,
+      available_resources: parseInt(resourcesRow.available_resources, 10) || 0,
+      total_exchange_requests: totalRequests,
+      completed_exchanges: completed,
+      pending_reports: parseInt(reportsRow.pending_reports, 10) || 0,
+      completion_rate: completionRate,
+      fulfillment_rate: fulfillmentRate,
+
+      // Comprehensive detailed M19 categories
+      users: {
+        total: parseInt(usersRow.total_users, 10) || 0,
+        active: parseInt(usersRow.active_users, 10) || 0,
+        suspended: parseInt(usersRow.suspended_users, 10) || 0,
+        pending_verification: parseInt(usersRow.pending_verification_users, 10) || 0,
+        students: parseInt(usersRow.student_users, 10) || 0,
+        admins: parseInt(usersRow.admin_users, 10) || 0
+      },
+      resources: {
+        total: parseInt(resourcesRow.total_resources, 10) || 0,
+        available: parseInt(resourcesRow.available_resources, 10) || 0,
+        reserved: parseInt(resourcesRow.reserved_resources, 10) || 0,
+        exchanged: parseInt(resourcesRow.exchanged_resources, 10) || 0,
+        archived: parseInt(resourcesRow.archived_resources, 10) || 0,
+        exchange_types: {
+          sell: parseInt(resourcesRow.sell_resources, 10) || 0,
+          borrow: parseInt(resourcesRow.borrow_resources, 10) || 0,
+          donate: parseInt(resourcesRow.donate_resources, 10) || 0,
+          swap: parseInt(resourcesRow.swap_resources, 10) || 0
+        }
+      },
+      exchanges: {
+        total: totalRequests,
+        pending: parseInt(exchangesRow.pending_requests, 10) || 0,
+        accepted: parseInt(exchangesRow.accepted_requests, 10) || 0,
+        completed: completed,
+        cancelled: cancelled,
+        rejected: parseInt(exchangesRow.rejected_requests, 10) || 0,
+        completion_rate: completionRate,
+        fulfillment_rate: fulfillmentRate
+      },
+      qr_verifications: {
+        total_generated: parseInt(qrRow.total_qr_generated, 10) || 0,
+        verified: qrVerified,
+        expired: qrExpired,
+        active: parseInt(qrRow.active_qr_codes, 10) || 0,
+        verification_rate: qrVerificationRate
+      },
+      reviews: {
+        total: parseInt(reviewsRow.total_reviews, 10) || 0,
+        average_rating: parseFloat(Number(reviewsRow.raw_avg_rating).toFixed(2)),
+        distribution: {
+          5: parseInt(reviewsRow.five_stars, 10) || 0,
+          4: parseInt(reviewsRow.four_stars, 10) || 0,
+          3: parseInt(reviewsRow.three_stars, 10) || 0,
+          2: parseInt(reviewsRow.two_stars, 10) || 0,
+          1: parseInt(reviewsRow.one_star, 10) || 0
+        }
+      },
+      reports: {
+        total: parseInt(reportsRow.total_reports, 10) || 0,
+        pending: parseInt(reportsRow.pending_reports, 10) || 0,
+        under_review: parseInt(reportsRow.under_review_reports, 10) || 0,
+        resolved: parseInt(reportsRow.resolved_reports, 10) || 0,
+        dismissed: parseInt(reportsRow.dismissed_reports, 10) || 0
+      },
+      notifications: {
+        total: parseInt(notificationsRow.total_notifications_sent, 10) || 0,
+        unread: parseInt(notificationsRow.unread_notifications, 10) || 0,
+        read: parseInt(notificationsRow.read_notifications, 10) || 0,
+        by_type: topNotificationTypes
+      }
+    };
+
+    cache.set('admin:analytics:summary', responseData, 30);
+
     // Preserve exact top-level fields for backwards compatibility with M10/M11 tests
     return res.status(200).json({
       success: true,
-      data: {
-        total_users: parseInt(usersRow.total_users, 10) || 0,
-        active_users: parseInt(usersRow.active_users, 10) || 0,
-        suspended_users: parseInt(usersRow.suspended_users, 10) || 0,
-        pending_verification_users: parseInt(usersRow.pending_verification_users, 10) || 0,
-        total_resources: parseInt(resourcesRow.total_resources, 10) || 0,
-        available_resources: parseInt(resourcesRow.available_resources, 10) || 0,
-        total_exchange_requests: totalRequests,
-        completed_exchanges: completed,
-        pending_reports: parseInt(reportsRow.pending_reports, 10) || 0,
-        completion_rate: completionRate,
-        fulfillment_rate: fulfillmentRate,
-
-        // Comprehensive detailed M19 categories
-        users: {
-          total: parseInt(usersRow.total_users, 10) || 0,
-          active: parseInt(usersRow.active_users, 10) || 0,
-          suspended: parseInt(usersRow.suspended_users, 10) || 0,
-          pending_verification: parseInt(usersRow.pending_verification_users, 10) || 0,
-          students: parseInt(usersRow.student_users, 10) || 0,
-          admins: parseInt(usersRow.admin_users, 10) || 0
-        },
-        resources: {
-          total: parseInt(resourcesRow.total_resources, 10) || 0,
-          available: parseInt(resourcesRow.available_resources, 10) || 0,
-          reserved: parseInt(resourcesRow.reserved_resources, 10) || 0,
-          exchanged: parseInt(resourcesRow.exchanged_resources, 10) || 0,
-          archived: parseInt(resourcesRow.archived_resources, 10) || 0,
-          exchange_types: {
-            sell: parseInt(resourcesRow.sell_resources, 10) || 0,
-            borrow: parseInt(resourcesRow.borrow_resources, 10) || 0,
-            donate: parseInt(resourcesRow.donate_resources, 10) || 0,
-            swap: parseInt(resourcesRow.swap_resources, 10) || 0
-          }
-        },
-        exchanges: {
-          total: totalRequests,
-          pending: parseInt(exchangesRow.pending_requests, 10) || 0,
-          accepted: parseInt(exchangesRow.accepted_requests, 10) || 0,
-          completed: completed,
-          cancelled: cancelled,
-          rejected: parseInt(exchangesRow.rejected_requests, 10) || 0,
-          completion_rate: completionRate,
-          fulfillment_rate: fulfillmentRate
-        },
-        qr_verifications: {
-          total_generated: parseInt(qrRow.total_qr_generated, 10) || 0,
-          verified: qrVerified,
-          expired: qrExpired,
-          active: parseInt(qrRow.active_qr_codes, 10) || 0,
-          verification_rate: qrVerificationRate
-        },
-        reviews: {
-          total: parseInt(reviewsRow.total_reviews, 10) || 0,
-          average_rating: parseFloat(Number(reviewsRow.raw_avg_rating).toFixed(2)),
-          distribution: {
-            5: parseInt(reviewsRow.five_stars, 10) || 0,
-            4: parseInt(reviewsRow.four_stars, 10) || 0,
-            3: parseInt(reviewsRow.three_stars, 10) || 0,
-            2: parseInt(reviewsRow.two_stars, 10) || 0,
-            1: parseInt(reviewsRow.one_star, 10) || 0
-          }
-        },
-        reports: {
-          total: parseInt(reportsRow.total_reports, 10) || 0,
-          pending: parseInt(reportsRow.pending_reports, 10) || 0,
-          under_review: parseInt(reportsRow.under_review_reports, 10) || 0,
-          resolved: parseInt(reportsRow.resolved_reports, 10) || 0,
-          dismissed: parseInt(reportsRow.dismissed_reports, 10) || 0
-        },
-        notifications: {
-          total: parseInt(notificationsRow.total_notifications_sent, 10) || 0,
-          unread: parseInt(notificationsRow.unread_notifications, 10) || 0,
-          read: parseInt(notificationsRow.read_notifications, 10) || 0,
-          by_type: topNotificationTypes
-        }
-      }
+      data: responseData
     });
 
   } catch (error) {

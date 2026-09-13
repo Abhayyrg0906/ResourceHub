@@ -3,6 +3,7 @@ const { createNotification } = require('../services/notificationService');
 const reputationService = require('../services/reputationService');
 const expiryService = require('../services/expiryService');
 const auditService = require('../services/auditService');
+const cache = require('../utils/cache');
 
 const { getAdminAnalytics } = require('./analyticsController');
 
@@ -178,6 +179,9 @@ const updateUserStatus = async (req, res) => {
       targetUser.id,
       'users'
     );
+
+    // Invalidate cached admin analytics
+    cache.flushPattern('admin:analytics');
 
     return res.status(200).json({
       success: true,
@@ -380,6 +384,9 @@ const updateResourceStatus = async (req, res) => {
       );
     }
 
+    // Invalidate cached admin analytics
+    cache.flushPattern('admin:analytics');
+
     return res.status(200).json({
       success: true,
       message: 'Resource status updated successfully.',
@@ -580,6 +587,9 @@ const updateReportStatus = async (req, res) => {
       'reports'
     );
 
+    // Invalidate cached admin analytics
+    cache.flushPattern('admin:analytics');
+
     return res.status(200).json({
       success: true,
       message: 'Report status updated successfully.',
@@ -656,6 +666,9 @@ const triggerAutoArchive = async (req, res) => {
       reason: `Auto-archival execution archived ${result.archived_count} listings out of ${result.scanned} scanned.`,
       metadata: { expiry_days: result.expiry_days, archived_ids: result.archived_ids }
     });
+
+    // Invalidate cached admin analytics
+    cache.flushPattern('admin:analytics');
 
     return res.status(200).json({
       success: true,
